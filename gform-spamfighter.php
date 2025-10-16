@@ -4,7 +4,7 @@
  * Plugin Name: GForm Spamfighter
  * Plugin URI: https://github.com/gbyat/gform-spamfighter
  * Description: Advanced spam protection for Gravity Forms using AI detection, pattern analysis, and behavior monitoring
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: webentwicklerin, Gabriele Laesser
  * Author URI: https://webentwicklerin.at
  * Text Domain: gform-spamfighter
@@ -25,7 +25,7 @@ if (! defined('ABSPATH')) {
 }
 
 // Define plugin constants.
-define('GFORM_SPAMFIGHTER_VERSION', '1.0.0');
+define('GFORM_SPAMFIGHTER_VERSION', '1.0.1');
 define('GFORM_SPAMFIGHTER_PLUGIN_FILE', __FILE__);
 define('GFORM_SPAMFIGHTER_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('GFORM_SPAMFIGHTER_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -106,10 +106,8 @@ class Plugin
      */
     private function init_hooks()
     {
-        // Initialize GitHub Updater for automatic updates.
-        new Core\GitHubUpdater(GFORM_SPAMFIGHTER_PLUGIN_FILE);
-
         add_action('plugins_loaded', array($this, 'load_textdomain'));
+        add_action('plugins_loaded', array($this, 'init_github_updater'), 5); // Early, before other plugins_loaded hooks
         add_action('plugins_loaded', array($this, 'load_gf_integration'), 20); // After GF loads
         add_action('init', array($this, 'init'));
 
@@ -137,6 +135,17 @@ class Plugin
     public function load_textdomain()
     {
         load_plugin_textdomain('gform-spamfighter', false, dirname(plugin_basename(GFORM_SPAMFIGHTER_PLUGIN_FILE)) . '/languages');
+    }
+
+    /**
+     * Initialize GitHub Updater for automatic updates.
+     */
+    public function init_github_updater()
+    {
+        // Only load in admin or when checking for updates.
+        if (is_admin() || wp_doing_cron()) {
+            new Core\Updater(GFORM_SPAMFIGHTER_PLUGIN_FILE);
+        }
     }
 
     /**

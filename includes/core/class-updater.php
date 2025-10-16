@@ -11,7 +11,7 @@ namespace GformSpamfighter\Core;
 /**
  * GitHub Updater class.
  */
-class GitHubUpdater
+class Updater
 {
     /**
      * Plugin file path.
