@@ -1,0 +1,38 @@
+# WordPress
+.htaccess
+wp-config.php
+wp-content/uploads/
+wp-content/blogs.dir/
+wp-content/upgrade/
+wp-content/backup-db/
+wp-content/cache/
+wp-content/cache/supercache/
+
+# Plugin specific
+node_modules/
+vendor/
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Environment
+.env
+.env.local
+
+AGENT.md
+INSTALL.md
+SECURITY.md
+TEST.md
+TROUBLESHOOTING.md
+wp-config-sample.php
+composer.json
+composer.lock
+package-lock.json
+package.json
+package-lock.json

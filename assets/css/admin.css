@@ -1,0 +1,30 @@
+/**
+ * Admin styles for GForm Spamfighter
+ */
+
+.gform-spamfighter-settings h2 {
+	margin-top: 30px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid #ddd;
+}
+
+.gform-spamfighter-settings .form-table th {
+	width: 250px;
+}
+
+.gform-spamfighter-settings input[type="number"] {
+	width: 100px;
+}
+
+.gform-spamfighter-settings .description {
+	color: #666;
+	font-style: italic;
+}
+
+.gform-spamfighter-settings .settings-section {
+	background: #fff;
+	padding: 20px;
+	margin-bottom: 20px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
