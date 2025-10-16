@@ -25,14 +25,13 @@ Thumbs.db
 .env
 .env.local
 
+# Development/Documentation files (not needed in releases)
 AGENT.md
 INSTALL.md
 SECURITY.md
 TEST.md
 TROUBLESHOOTING.md
 wp-config-sample.php
-composer.json
+
+# Composer (not used in this plugin)
 composer.lock
-package-lock.json
-package.json
-package-lock.json

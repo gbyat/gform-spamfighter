@@ -2,7 +2,7 @@
 
 /**
  * Plugin Name: GForm Spamfighter
- * Plugin URI: https://webentwicklerin.at
+ * Plugin URI: https://github.com/gbyat/gform-spamfighter
  * Description: Advanced spam protection for Gravity Forms using AI detection, pattern analysis, and behavior monitoring
  * Version: 1.0.0
  * Author: webentwicklerin, Gabriele Laesser
@@ -29,6 +29,7 @@ define('GFORM_SPAMFIGHTER_VERSION', '1.0.0');
 define('GFORM_SPAMFIGHTER_PLUGIN_FILE', __FILE__);
 define('GFORM_SPAMFIGHTER_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('GFORM_SPAMFIGHTER_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('GFORM_SPAMFIGHTER_GITHUB_REPO', 'gbyat/gform-spamfighter');
 
 // Autoloader.
 spl_autoload_register(
@@ -105,9 +106,16 @@ class Plugin
      */
     private function init_hooks()
     {
+        // Initialize GitHub Updater for automatic updates.
+        new Core\GitHubUpdater(GFORM_SPAMFIGHTER_PLUGIN_FILE);
+
         add_action('plugins_loaded', array($this, 'load_textdomain'));
         add_action('plugins_loaded', array($this, 'load_gf_integration'), 20); // After GF loads
         add_action('init', array($this, 'init'));
+
+        // Check if Gravity Forms is active.
+        add_action('admin_init', array($this, 'check_gravity_forms_dependency'));
+        add_action('admin_notices', array($this, 'gravity_forms_missing_notice'));
 
         // Cron: daily cleanup of old logs.
         add_action('gform_spamfighter_clean_logs', array($this, 'clean_logs_cron'));
@@ -155,26 +163,23 @@ class Plugin
     }
 
     /**
-     * Show notice if Gravity Forms is not active.
-     */
-    public function gravity_forms_notice()
-    {
-?>
-        <div class="notice notice-error">
-            <p>
-                <?php
-                echo esc_html__('GFORM Spamfighter requires Gravity Forms to be installed and activated.', 'gform-spamfighter');
-                ?>
-            </p>
-        </div>
-<?php
-    }
-
-    /**
      * Plugin activation.
      */
     public function activate()
     {
+        // Check if Gravity Forms is installed and active.
+        if (! $this->is_gravity_forms_active()) {
+            deactivate_plugins(plugin_basename(GFORM_SPAMFIGHTER_PLUGIN_FILE));
+            wp_die(
+                '<h1>' . esc_html__('Plugin Activation Error', 'gform-spamfighter') . '</h1>' .
+                    '<p>' . esc_html__('GFORM Spamfighter requires Gravity Forms to be installed and activated.', 'gform-spamfighter') . '</p>' .
+                    '<p><a href="https://www.gravityforms.com/" target="_blank">' . esc_html__('Get Gravity Forms', 'gform-spamfighter') . '</a></p>' .
+                    '<p><a href="' . esc_url(admin_url('plugins.php')) . '">' . esc_html__('Return to Plugins', 'gform-spamfighter') . '</a></p>',
+                esc_html__('Plugin Activation Error', 'gform-spamfighter'),
+                array('back_link' => true)
+            );
+        }
+
         Core\Database::get_instance()->create_tables();
 
         // Set default options.
@@ -214,6 +219,69 @@ class Plugin
         flush_rewrite_rules();
         // Clear scheduled cleanup.
         wp_clear_scheduled_hook('gform_spamfighter_clean_logs');
+    }
+
+    /**
+     * Check if Gravity Forms is active.
+     *
+     * @return bool
+     */
+    private function is_gravity_forms_active()
+    {
+        // Check if Gravity Forms class exists.
+        if (class_exists('GFForms')) {
+            return true;
+        }
+
+        // Check if Gravity Forms plugin is active.
+        $active_plugins = get_option('active_plugins', array());
+
+        // Single site check.
+        if (in_array('gravityforms/gravityforms.php', $active_plugins, true)) {
+            return true;
+        }
+
+        // Multisite check.
+        if (is_multisite()) {
+            $active_sitewide_plugins = get_site_option('active_sitewide_plugins', array());
+            if (isset($active_sitewide_plugins['gravityforms/gravityforms.php'])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check Gravity Forms dependency on admin_init.
+     */
+    public function check_gravity_forms_dependency()
+    {
+        if (! $this->is_gravity_forms_active()) {
+            deactivate_plugins(plugin_basename(GFORM_SPAMFIGHTER_PLUGIN_FILE));
+            set_transient('gform_spamfighter_deactivated', true, 10);
+        }
+    }
+
+    /**
+     * Show admin notice if Gravity Forms is missing.
+     */
+    public function gravity_forms_missing_notice()
+    {
+        if (get_transient('gform_spamfighter_deactivated')) {
+            delete_transient('gform_spamfighter_deactivated');
+?>
+            <div class="notice notice-error">
+                <p>
+                    <strong><?php esc_html_e('GFORM Spamfighter has been deactivated.', 'gform-spamfighter'); ?></strong>
+                </p>
+                <p>
+                    <?php esc_html_e('This plugin requires Gravity Forms to be installed and activated.', 'gform-spamfighter'); ?>
+                    <a href="https://www.gravityforms.com/" target="_blank"><?php esc_html_e('Get Gravity Forms', 'gform-spamfighter'); ?></a>
+                </p>
+            </div>
+<?php
+        }
     }
 
     /**

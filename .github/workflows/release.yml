@@ -1,0 +1,112 @@
+name: Release Plugin
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Extract version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Create ZIP file
+        run: |
+          # Create a temporary directory for the plugin
+          mkdir -p gform-spamfighter
+
+          # Copy main plugin file
+          cp gform-spamfighter.php gform-spamfighter/
+          echo "✅ Copied gform-spamfighter.php"
+
+          # Copy includes directory (PHP classes)
+          if [ -d "includes" ]; then
+            cp -r includes gform-spamfighter/
+            echo "✅ Copied includes/ (PHP classes)"
+          else
+            echo "ERROR: Includes directory not found!"
+            exit 1
+          fi
+
+          # Copy assets directory (CSS/JS)
+          if [ -d "assets" ]; then
+            cp -r assets gform-spamfighter/
+            echo "✅ Copied assets/ (CSS/JS assets)"
+          else
+            echo "⚠️  Assets directory not found (optional)"
+          fi
+
+          # Copy uninstall script
+          if [ -f "uninstall.php" ]; then
+            cp uninstall.php gform-spamfighter/
+            echo "✅ Copied uninstall.php"
+          fi
+
+          # Copy documentation files
+          for doc in README.md CHANGELOG.md INSTALL.md SECURITY.md TEST.md TROUBLESHOOTING.md LICENSE; do
+            if [ -f "$doc" ]; then
+              cp "$doc" gform-spamfighter/
+              echo "✅ Copied $doc"
+            else
+              echo "⚠️  Documentation not found: $doc (optional)"
+            fi
+          done
+
+          # Copy composer.json if exists
+          if [ -f "composer.json" ]; then
+            cp composer.json gform-spamfighter/
+            echo "✅ Copied composer.json"
+          fi
+
+          # Debug - List directory contents
+          echo "=== Plugin directory contents ==="
+          ls -la gform-spamfighter/
+          echo "=== Includes directory ==="
+          ls -la gform-spamfighter/includes/ || echo "Includes not found"
+          echo "=== Assets directory ==="
+          ls -la gform-spamfighter/assets/ || echo "Assets not found"
+
+          # Create ZIP file - always named gform-spamfighter.zip
+          zip -r gform-spamfighter.zip gform-spamfighter/
+
+          # Debug - Check ZIP contents
+          echo "=== ZIP file contents (first 30 lines) ==="
+          unzip -l gform-spamfighter.zip | head -30
+          echo "..."
+          unzip -l gform-spamfighter.zip | tail -10
+
+          echo "✅ ZIP file created: gform-spamfighter.zip"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: gform-spamfighter.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          name: "GFORM Spamfighter v${{ steps.get_version.outputs.VERSION }}"
+          body: |
+            ## GFORM Spamfighter v${{ steps.get_version.outputs.VERSION }}
+
+            Download `gform-spamfighter.zip` and install it in your WordPress site.
+
+            ### Installation
+            1. Download the ZIP file below
+            2. Go to WordPress Admin → Plugins → Add New → Upload Plugin
+            3. Upload `gform-spamfighter.zip`
+            4. Activate the plugin
+            5. Configure settings under Settings → Spamfighter
+
+            See [CHANGELOG.md](https://github.com/gbyat/gform-spamfighter/blob/main/CHANGELOG.md) for details.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
