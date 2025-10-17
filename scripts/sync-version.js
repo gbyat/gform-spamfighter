@@ -70,33 +70,42 @@ All notable changes to this project will be documented in this file.
     // Check if this version already exists in changelog
     const versionPattern = new RegExp(`## \\[${version.replace(/\./g, '\\.')}\\]`);
     if (!versionPattern.test(changelogContent)) {
-        // Get git log since last tag
+        // Get current date
+        const dateStr = new Date().toISOString().split('T')[0];
+
+        // Get git commits since last tag
         let gitLog = '';
         try {
-            // Get commits since last tag
-            gitLog = execSync('git log $(git describe --tags --abbrev=0 2>/dev/null || echo HEAD~10)..HEAD --oneline --pretty=format:"- %s"', {
+            // First, try to get the last tag
+            let lastTag = '';
+            try {
+                lastTag = execSync('git describe --tags --abbrev=0', {
+                    encoding: 'utf8',
+                    stdio: ['pipe', 'pipe', 'ignore']
+                }).trim();
+            } catch (e) {
+                // No tags yet, use all commits
+                lastTag = '';
+            }
+
+            // Get commits since last tag (or last 10 if no tags)
+            const gitCommand = lastTag
+                ? `git log ${lastTag}..HEAD --oneline --pretty=format:"- %s"`
+                : 'git log -10 --oneline --pretty=format:"- %s"';
+
+            gitLog = execSync(gitCommand, {
                 encoding: 'utf8',
                 stdio: ['pipe', 'pipe', 'ignore']
             }).trim();
         } catch (e) {
-            // No previous tags, get last 10 commits
-            try {
-                gitLog = execSync('git log -10 --oneline --pretty=format:"- %s"', {
-                    encoding: 'utf8',
-                    stdio: ['pipe', 'pipe', 'ignore']
-                }).trim();
-            } catch (e2) {
-                gitLog = '- Version bump';
-            }
+            // Fallback if git fails
+            gitLog = '- Version update';
         }
-
-        // Get current date
-        const dateStr = new Date().toISOString().split('T')[0];
 
         // Create new changelog entry
         const newEntry = `## [${version}] - ${dateStr}
 
-${gitLog ? gitLog : '- Version update'}
+${gitLog || '- Version update'}
 
 `;
 
