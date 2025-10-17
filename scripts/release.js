@@ -13,14 +13,6 @@ if (!['patch', 'minor', 'major'].includes(releaseType)) {
 console.log(`🚀 Creating ${releaseType} release for GFORM Spamfighter...`);
 
 try {
-    // Check if there are uncommitted changes
-    const status = execSync('git status --porcelain', { encoding: 'utf8' });
-
-    if (status.trim()) {
-        console.log('📝 Found uncommitted changes, adding them...');
-        execSync('git add -A', { stdio: 'inherit' });
-    }
-
     // Read current version
     const packagePath = path.join(__dirname, '..', 'package.json');
     const packageData = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
@@ -38,6 +30,10 @@ try {
     // Sync version to plugin file and update CHANGELOG
     console.log('🔄 Syncing version to plugin file...');
     execSync('node scripts/sync-version.js', { stdio: 'inherit' });
+
+    // Add all changed files (package.json, plugin file, README.md, CHANGELOG.md)
+    console.log('📦 Adding all changes to git...');
+    execSync('git add -A', { stdio: 'inherit' });
 
     // Commit all changes
     console.log('💾 Committing changes...');
