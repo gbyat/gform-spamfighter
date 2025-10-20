@@ -15,3 +15,8 @@ wp-config-sample.php export-ignore
 composer.json export-ignore
 composer.lock export-ignore
 
+# Ensure translation templates are included in release
+languages/ export-ignore=false
+languages/*.po export-ignore=false
+languages/*.mo export-ignore=false
+

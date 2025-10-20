@@ -1,0 +1,437 @@
+# Copyright (C) 2025 GForm Spamfighter
+# This file is distributed under the same license as the GForm Spamfighter package.
+msgid ""
+msgstr ""
+"Project-Id-Version: GForm Spamfighter\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language-Team: webentwicklerin.at\n"
+"Last-Translator: webentwicklerin, Gabriele Laesser <mail@webentwicklerin.at>\n"
+"POT-Creation-Date: 2025-10-20 07:31+0000\n"
+"Report-Msgid-Bugs-To: https://github.com/gbyat/gform-spamfighter/issues\n"
+"X-Domain: gform-spamfighter\n"
+"X-Poedit-Basepath: ..\n"
+"X-Poedit-KeywordsList: __;_e;_ex:1,2c;_n:1,2;_n_noop:1,2;_nx:1,2,4c;_nx_noop:1,2,3c;_x:1,2c;esc_attr__;esc_attr_e;esc_attr_x:1,2c;esc_html__;esc_html_e;esc_html_x:1,2c\n"
+"X-Poedit-SearchPath-0: .\n"
+"X-Poedit-SearchPathExcluded-0: *.js\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: ../gform-spamfighter.php:183, ../gform-spamfighter.php:187
+msgid "Plugin Activation Error"
+msgstr ""
+
+#: ../gform-spamfighter.php:184
+msgid "GFORM Spamfighter requires Gravity Forms to be installed and activated."
+msgstr ""
+
+#: ../gform-spamfighter.php:185, ../gform-spamfighter.php:289
+msgid "Get Gravity Forms"
+msgstr ""
+
+#: ../gform-spamfighter.php:186
+msgid "Return to Plugins"
+msgstr ""
+
+#: ../gform-spamfighter.php:285
+msgid "GFORM Spamfighter has been deactivated."
+msgstr ""
+
+#: ../gform-spamfighter.php:288
+msgid "This plugin requires Gravity Forms to be installed and activated."
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:57, ../includes/admin/class-settings.php:61
+msgid "GFORM Spamfighter"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:58, ../includes/admin/class-settings.php:62
+msgid "Spamfighter"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:68, ../includes/admin/class-dashboard.php:69
+msgid "Dashboard"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:77, ../includes/admin/class-dashboard.php:78, ../includes/admin/class-dashboard.php:283
+msgid "Spam Logs"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:135
+msgid "GFORM Spamfighter Dashboard"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:139
+msgid "🔓 Clear All Strikes (Testing)"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:147
+msgid "Spam Blocked (30 days)"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:153
+msgid "Top Detection Method"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:170
+msgid "Spam Blocked Today"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:177
+msgid "Spam Trend (Last 7 days)"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:207
+msgid "Detection Methods"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:217
+msgid "No data yet"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:225
+msgid "Most Targeted Forms"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:229, ../includes/admin/class-dashboard.php:289
+msgid "Form ID"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:230
+msgid "Form Name"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:231
+msgid "Spam Count"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:288
+msgid "Date"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:290
+msgid "Score"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:291
+msgid "Detection Method"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:292
+msgid "IP Address"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:293
+msgid "Action"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:313
+msgid "👁️ View Details"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:300
+msgid "No spam logs found."
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:331
+msgid "Previous"
+msgstr ""
+
+#: ../includes/admin/class-dashboard.php:337
+msgid "Next"
+msgstr ""
+
+#. translators: %d: Number of strikes cleared
+#: ../includes/admin/class-dashboard.php:439
+msgid "Cleared %d strike entries"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:119
+msgid "General Settings"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:126
+msgid "Enable Spam Protection"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:132
+msgid "Enable or disable all spam protection features"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:138
+msgid "Block Action"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:145
+msgid "Mark as spam (allow submission)"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:146
+msgid "Reject submission (show error)"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:148
+msgid "How to handle detected spam"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:155
+msgid "OpenAI Integration"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:162
+msgid "Enable OpenAI Detection"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:168
+msgid "Use OpenAI to detect AI-generated spam"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:174
+msgid "OpenAI API Key"
+msgstr ""
+
+#. translators: %s: OpenAI API URL
+#: ../includes/admin/class-settings.php:183
+msgid "Get your API key from <a href=\"%s\" target=\"_blank\">OpenAI Platform</a>"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:191
+msgid "OpenAI Model"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:205
+msgid "Which AI model to use for spam detection. GPT-4o Mini offers the best cost/performance ratio. <strong>Note:</strong> Cost estimates are approximate and may vary. We cannot guarantee pricing accuracy."
+msgstr ""
+
+#: ../includes/admin/class-settings.php:211
+msgid "AI Spam Threshold"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:220
+msgid "Spam score threshold (0.0 - 1.0). Higher = stricter. Default: 0.7"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:227
+msgid "Pattern Detection"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:234
+msgid "Enable Pattern Detection"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:240
+msgid "Check for suspicious patterns, keywords, and links"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:247
+msgid "Behavior Analysis"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:254
+msgid "Enable Time Check"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:260
+msgid "Block submissions that are too fast"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:266
+msgid "Minimum Submission Time"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:275
+msgid "Minimum seconds before submission is allowed (default: 3)"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:281
+msgid "Enable Language Check"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:287
+msgid "Check if submission language matches site language"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:293
+msgid "Enable Duplicate Check"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:299
+msgid "Block duplicate submissions from same IP"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:305
+msgid "Duplicate Check Timeframe"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:314
+msgid "Hours to look back for duplicates (default: 24)"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:321
+msgid "Notifications"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:328
+msgid "Email Notifications"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:334
+msgid "Send email when spam is detected"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:340
+msgid "Notification Email"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:347
+msgid "Email address for notifications"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:354
+msgid "Maintenance"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:361
+msgid "Log Retention"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:370
+msgid "Days to keep spam logs (default: 30)"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:380
+msgid "Configure general spam protection settings."
+msgstr ""
+
+#: ../includes/admin/class-settings.php:388
+msgid "Use OpenAI's GPT models to detect AI-generated spam with high accuracy."
+msgstr ""
+
+#: ../includes/admin/class-settings.php:396
+msgid "Detect spam based on suspicious patterns, keywords, and links."
+msgstr ""
+
+#: ../includes/admin/class-settings.php:404
+msgid "Analyze submission behavior to detect automated spam."
+msgstr ""
+
+#: ../includes/admin/class-settings.php:412
+msgid "Configure email notifications for spam detection."
+msgstr ""
+
+#: ../includes/admin/class-settings.php:420
+msgid "Manage database cleanup and maintenance."
+msgstr ""
+
+#: ../includes/admin/class-settings.php:553
+msgid "Test OpenAI Connection"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:556
+msgid "Test your OpenAI API connection and configuration."
+msgstr ""
+
+#: ../includes/admin/class-settings.php:559
+msgid "Test Connection"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:591
+msgid "Please configure your OpenAI API key first."
+msgstr ""
+
+#. translators: %s: Spam score
+#: ../includes/admin/class-settings.php:630
+msgid "OpenAI API connection successful! Test spam score: %.2f"
+msgstr ""
+
+#: ../includes/admin/class-settings.php:619
+msgid "OpenAI API test failed: %s"
+msgstr ""
+
+#. translators: %s: Error message
+#: ../includes/admin/class-settings.php:643
+msgid "OpenAI API test exception: %s"
+msgstr ""
+
+#: ../includes/core/class-updater.php:203
+msgid "No changelog available."
+msgstr ""
+
+#: ../includes/core/class-updater.php:314
+msgid "Installation"
+msgstr ""
+
+#: ../includes/core/class-updater.php:316
+msgid "Download the latest release ZIP file"
+msgstr ""
+
+#: ../includes/core/class-updater.php:317
+msgid "Go to WordPress Admin → Plugins → Add New → Upload Plugin"
+msgstr ""
+
+#: ../includes/core/class-updater.php:318
+msgid "Upload the ZIP file and click Install Now"
+msgstr ""
+
+#: ../includes/core/class-updater.php:319
+msgid "Activate the plugin"
+msgstr ""
+
+#: ../includes/core/class-updater.php:320
+msgid "Configure settings under Settings → Spamfighter"
+msgstr ""
+
+#: ../includes/integration/class-gravity-forms.php:120
+msgid "This form has been temporarily locked due to a previous spam warning. Please wait 15 minutes or reload the page to try again."
+msgstr ""
+
+#: ../includes/integration/class-gravity-forms.php:287
+msgid "Please remove any links from your message. Links are not allowed in this field."
+msgstr ""
+
+#: ../includes/integration/class-gravity-forms.php:344
+msgid "Your submission has been identified as spam. If you believe this is an error, please contact us directly."
+msgstr ""
+
+#. translators: %s: Form title
+#: ../includes/integration/class-gravity-forms.php:605
+msgid "[BLOCKED] Spam detected in form: %s"
+msgstr ""
+
+#. translators: 1: Spam score, 2: Form title, 3: Site name, 4: Timestamp, 5: Submitted data, 6: Detection details
+#: ../includes/integration/class-gravity-forms.php:611
+msgid ""
+"A spam submission was BLOCKED with a score of %1$.2f.\n"
+"\n"
+"Form: %2$s\n"
+"Site: %3$s\n"
+"Time: %4$s\n"
+"\n"
+"=== Submitted Data ===\n"
+"%5$s\n"
+"\n"
+"=== Detection Details ===\n"
+"%6$s"
+msgstr ""
+
+#: ../includes/integration/class-gravity-forms.php:588
+msgid "[Warning] Link in form submission: %s"
+msgstr ""
+
+#: ../includes/integration/class-gravity-forms.php:594
+msgid ""
+"A form submission received a warning (user can still correct).\n"
+"\n"
+"Form: %1$s\n"
+"Site: %2$s\n"
+"Time: %3$s\n"
+"Score: %4$.2f\n"
+"Warning: Single link in message field\n"
+"\n"
+"=== Submitted Data ===\n"
+"%5$s\n"
+"\n"
+"=== Detection Details ===\n"
+"%6$s"
+msgstr ""

@@ -4,7 +4,7 @@
  * Plugin Name: GForm Spamfighter
  * Plugin URI: https://github.com/gbyat/gform-spamfighter
  * Description: Advanced spam protection for Gravity Forms using AI detection, pattern analysis, and behavior monitoring
- * Version: 1.0.5
+ * Version: 1.0.6
  * Author: webentwicklerin, Gabriele Laesser
  * Author URI: https://webentwicklerin.at
  * Text Domain: gform-spamfighter
@@ -25,7 +25,7 @@ if (! defined('ABSPATH')) {
 }
 
 // Define plugin constants.
-define('GFORM_SPAMFIGHTER_VERSION', '1.0.5');
+define('GFORM_SPAMFIGHTER_VERSION', '1.0.6');
 define('GFORM_SPAMFIGHTER_PLUGIN_FILE', __FILE__);
 define('GFORM_SPAMFIGHTER_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('GFORM_SPAMFIGHTER_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -196,18 +196,18 @@ class Plugin
             'enabled'                    => true,
             'openai_enabled'             => false,
             'openai_api_key'             => '',
-            'openai_model'               => 'moderation',
+            'openai_model'               => 'gpt-4o-mini',
             'ai_threshold'               => 0.7,
             'time_check_enabled'         => true,
-            'min_submission_time'        => 3,
+            'min_submission_time'        => 5,
             'pattern_check_enabled'      => true,
             'language_check_enabled'     => true,
             'duplicate_check_enabled'    => true,
             'duplicate_check_timeframe'  => 24,
             'log_retention_days'         => 30,
-            'block_action'               => 'reject',
+            'block_action'               => 'mark',
             'notification_email'         => get_option('admin_email'),
-            'notify_on_spam'             => false,
+            'notify_on_spam'             => true,
         );
 
         add_option('gform_spamfighter_settings', $defaults);

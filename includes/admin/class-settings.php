@@ -142,8 +142,8 @@ class Settings
             array(
                 'field_id'    => 'block_action',
                 'options'     => array(
-                    'reject' => __('Reject submission (show error)', 'gform-spamfighter'),
                     'mark'   => __('Mark as spam (allow submission)', 'gform-spamfighter'),
+                    'reject' => __('Reject submission (show error)', 'gform-spamfighter'),
                 ),
                 'description' => __('How to handle detected spam', 'gform-spamfighter'),
             )
@@ -195,13 +195,14 @@ class Settings
             array(
                 'field_id'    => 'openai_model',
                 'options'     => array(
-                    'moderation'    => '🆓 Moderation API (FREE, recommended for spam!)',
-                    'gpt-4o-mini'   => 'GPT-4o Mini (paid, ~$0.15/1000 checks)',
-                    'gpt-4o'        => 'GPT-4o (paid, highest accuracy, ~$7.50/1000)',
-                    'gpt-4-turbo'   => 'GPT-4 Turbo (paid, legacy)',
-                    'gpt-3.5-turbo' => 'GPT-3.5 Turbo (paid, legacy, cheapest)',
+                    'gpt-4o-mini'   => 'GPT-4o Mini (recommended, ~$0.15/1000 checks)',
+                    'gpt-5-mini'    => 'GPT-5 mini (new, faster, ~$0.30/1000 checks)',
+                    'gpt-4o'        => 'GPT-4o (highest accuracy, ~$7.50/1000 checks)',
+                    'gpt-5'         => 'GPT-5 (latest, most powerful, ~$15/1000 checks)',
+                    'gpt-4-turbo'   => 'GPT-4 Turbo (legacy)',
+                    'gpt-3.5-turbo' => 'GPT-3.5 Turbo (legacy, cheapest)',
                 ),
-                'description' => __('Which AI model to use for spam detection', 'gform-spamfighter'),
+                'description' => __('Which AI model to use for spam detection. GPT-4o Mini offers the best cost/performance ratio. <strong>Note:</strong> Cost estimates are approximate and may vary. We cannot guarantee pricing accuracy.', 'gform-spamfighter'),
             )
         );
 
@@ -746,9 +747,9 @@ class Settings
 
         // Whitelist for OpenAI model.
         if (isset($input['openai_model'])) {
-            $allowed_models = array('moderation', 'gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo');
+            $allowed_models = array('gpt-4o-mini', 'gpt-5-mini', 'gpt-4o', 'gpt-5', 'gpt-4-turbo', 'gpt-3.5-turbo');
             $model          = sanitize_text_field($input['openai_model']);
-            $sanitized['openai_model'] = in_array($model, $allowed_models, true) ? $model : 'moderation';
+            $sanitized['openai_model'] = in_array($model, $allowed_models, true) ? $model : 'gpt-4o-mini';
         }
 
         // Whitelist for block action.
