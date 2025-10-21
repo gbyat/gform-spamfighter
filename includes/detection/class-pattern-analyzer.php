@@ -22,6 +22,26 @@ class PatternAnalyzer
      */
     public function analyze($entry)
     {
+        // Apply field exclusion filter (e.g., for campaign/tracking fields).
+        $excluded_fields = apply_filters('gform_spamfighter_excluded_fields', array());
+
+        // Remove excluded fields from analysis.
+        if (!empty($excluded_fields) && is_array($excluded_fields)) {
+            foreach ($excluded_fields as $field_name) {
+                unset($entry[$field_name]);
+                // Also remove from _grouped if present.
+                if (isset($entry['_grouped'])) {
+                    foreach ($entry['_grouped'] as $type => &$values) {
+                        if (is_array($values)) {
+                            $values = array_filter($values, function ($key) use ($field_name) {
+                                return $key !== $field_name;
+                            }, ARRAY_FILTER_USE_KEY);
+                        }
+                    }
+                }
+            }
+        }
+
         $score   = 0;
         $reasons = array();
 
@@ -369,29 +389,36 @@ class PatternAnalyzer
     /**
      * Check URL/Website field patterns.
      * Treat URLs with query parameters as spam; also flag shorteners, suspicious TLDs, raw IPs.
+     * Only checks actual URL/website fields from user input, not text/textarea fields.
      *
      * @param array $entry Entry data.
      * @return array
      */
     private function check_url_pattern($entry)
     {
-        $content = $this->get_text_content($entry);
+        // Only check URL/website fields, not text/textarea content.
+        $url_values = array();
+        if (isset($entry['_grouped']) && is_array($entry['_grouped'])) {
+            $grouped    = $entry['_grouped'];
+            $url_values = isset($grouped['website']) ? (array) $grouped['website'] : array();
+        }
 
-        // Extract URLs (simple matcher covering most cases)
-        preg_match_all('#https?://[^\s<>"{}|\\^`\[\]]+#i', $content, $matches);
-
-        if (empty($matches[0])) {
+        if (empty($url_values)) {
             return array('detected' => false);
         }
 
         $score   = 0;
         $reasons = array();
 
-        foreach ($matches[0] as $url) {
-            // Parameters → decisive
+        foreach ($url_values as $url) {
+            if (empty($url) || !is_string($url)) {
+                continue;
+            }
+
+            // Parameters in URL fields → suspicious
             if (strpos($url, '?') !== false) {
                 $score    = max($score, 80);
-                $reasons[] = 'URL with parameters not allowed';
+                $reasons[] = 'URL with parameters in website field';
             }
 
             // Shorteners

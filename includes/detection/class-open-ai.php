@@ -72,7 +72,7 @@ class OpenAI
             $this->model = 'omni-moderation-latest';
         } else {
             // Sanitize model to prevent injection.
-            $allowed_models = array('gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo');
+            $allowed_models = array('gpt-4o-mini', 'gpt-5-mini', 'gpt-4o', 'gpt-5', 'gpt-4-turbo', 'gpt-3.5-turbo');
             $this->model = in_array($model, $allowed_models, true) ? $model : 'gpt-4o-mini';
         }
     }

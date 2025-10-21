@@ -241,6 +241,18 @@ class Settings
             )
         );
 
+        add_settings_field(
+            'exclude_hidden_fields',
+            __('Exclude Hidden Fields', 'gform-spamfighter'),
+            array($this, 'render_checkbox_field'),
+            'gform-spamfighter',
+            'gform_spamfighter_pattern',
+            array(
+                'field_id'    => 'exclude_hidden_fields',
+                'description' => __('Exclude all hidden fields from spam analysis (recommended for campaign/tracking fields)', 'gform-spamfighter'),
+            )
+        );
+
         // Behavior analysis section.
         add_settings_section(
             'gform_spamfighter_behavior',
@@ -731,6 +743,7 @@ class Settings
             'openai_enabled',
             'time_check_enabled',
             'pattern_check_enabled',
+            'exclude_hidden_fields',
             'language_check_enabled',
             'duplicate_check_enabled',
             'notify_on_spam',

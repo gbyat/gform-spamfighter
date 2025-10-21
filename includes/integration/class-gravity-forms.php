@@ -384,6 +384,14 @@ class GravityForms
         );
 
         foreach ($form['fields'] as $field) {
+            // Get field type early.
+            $type = method_exists($field, 'get_input_type') ? $field->get_input_type() : (property_exists($field, 'type') ? $field->type : 'text');
+
+            // Skip hidden fields if setting is enabled.
+            if ($type === 'hidden' && !empty($this->settings['exclude_hidden_fields'])) {
+                continue;
+            }
+
             // During validation, we need to get values from POST, not from GFFormsModel
             $input_name = 'input_' . $field->id;
 
@@ -429,7 +437,6 @@ class GravityForms
                 $entry['field_' . $field->id] = $value; // Also store by ID
 
                 // Group by GF field type for targeted checks
-                $type = method_exists($field, 'get_input_type') ? $field->get_input_type() : (property_exists($field, 'type') ? $field->type : 'text');
                 switch ($type) {
                     case 'email':
                         $grouped['email'][] = $value;
