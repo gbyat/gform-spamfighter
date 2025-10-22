@@ -308,13 +308,26 @@ class PatternAnalyzer
 
     /**
      * Check for suspicious patterns.
+     * Only checks text/textarea fields to avoid false positives from phone numbers, etc.
      *
      * @param array $entry Entry data.
      * @return array
      */
     private function check_suspicious_patterns($entry)
     {
-        $content = $this->get_text_content($entry);
+        // Only check text/textarea content (not phone, number, or other fields).
+        $text_content = '';
+        if (isset($entry['_grouped']) && is_array($entry['_grouped'])) {
+            $grouped      = $entry['_grouped'];
+            $text_values  = isset($grouped['text']) ? (array) $grouped['text'] : array();
+            $text_values  = array_merge($text_values, isset($grouped['textarea']) ? (array) $grouped['textarea'] : array());
+            $text_content = implode(' ', $text_values);
+        }
+
+        // Fallback if no grouped data.
+        if (empty($text_content)) {
+            $text_content = $this->get_text_content($entry);
+        }
 
         $patterns = array(
             '/(\w)\1{5,}/'           => 'Excessive character repetition',
@@ -326,7 +339,7 @@ class PatternAnalyzer
         );
 
         foreach ($patterns as $pattern => $description) {
-            if (preg_match($pattern, $content)) {
+            if (preg_match($pattern, $text_content)) {
                 return array(
                     'detected' => true,
                     'score'    => 25,
