@@ -54,6 +54,13 @@ class PatternAnalyzer
             'suspicious_keywords'  => $this->check_suspicious_keywords($entry),
             'suspicious_patterns'  => $this->check_suspicious_patterns($entry),
 
+            // New advanced checks
+            'duplicate_message'    => $this->check_duplicate_message($entry),
+            'email_in_message'     => $this->check_email_in_message($entry),
+            'all_caps_sentences'   => $this->check_all_caps_sentences($entry),
+            'excessive_exclamations' => $this->check_excessive_exclamations($entry),
+            'business_terminology' => $this->check_business_terminology($entry),
+
             // Email-specific
             'email_pattern'        => $this->check_email_pattern($entry),
 
@@ -503,18 +510,221 @@ class PatternAnalyzer
     {
         $content = $this->get_text_content($entry);
 
-        // Check for repeated words.
+        // Check for repeated words based on density, not absolute count
         $words = preg_split('/\s+/', $content);
+        $total_words = count($words);
         $word_counts = array_count_values($words);
 
         foreach ($word_counts as $word => $count) {
-            if (strlen($word) > 3 && $count > 5) {
-                return array(
-                    'detected' => true,
-                    'score'    => 15,
-                    'reason'   => sprintf('Word "%s" repeated %d times', $word, $count),
-                );
+            if (strlen($word) > 3) {
+                // Calculate word density (percentage of total words)
+                $density = ($count / $total_words) * 100;
+
+                // Flag if word appears in more than 15% of text (adjustable threshold)
+                if ($density > 15) {
+                    return array(
+                        'detected' => true,
+                        'score'    => 15,
+                        'reason'   => sprintf('Word "%s" repeated %d times (%.1f%% of text)', $word, $count, $density),
+                    );
+                }
             }
+        }
+
+        return array('detected' => false);
+    }
+
+    /**
+     * Check for duplicate messages.
+     *
+     * @param array $entry Entry data.
+     * @return array
+     */
+    private function check_duplicate_message($entry)
+    {
+        // Only check textarea content for duplicates
+        $message_content = '';
+        if (isset($entry['_grouped']) && is_array($entry['_grouped'])) {
+            $grouped = $entry['_grouped'];
+            $message_content = isset($grouped['textarea']) ? implode(' ', (array) $grouped['textarea']) : '';
+        }
+
+        if (empty($message_content)) {
+            return array('detected' => false);
+        }
+
+        // Create hash of message content
+        $message_hash = md5(strtolower(trim($message_content)));
+        $duplicate_key = 'gform_spamfighter_message_' . $message_hash;
+
+        // Check if this exact message was submitted before
+        $previous_submission = get_transient($duplicate_key);
+
+        if ($previous_submission) {
+            return array(
+                'detected' => true,
+                'score'    => 80,
+                'reason'   => 'Identical message submitted before',
+            );
+        }
+
+        // Store this message hash for 24 hours
+        set_transient($duplicate_key, time(), DAY_IN_SECONDS);
+
+        return array('detected' => false);
+    }
+
+    /**
+     * Check for email addresses in message content (not allowed).
+     *
+     * @param array $entry Entry data.
+     * @return array
+     */
+    private function check_email_in_message($entry)
+    {
+        // Get message content
+        $message_content = '';
+        if (isset($entry['_grouped']) && is_array($entry['_grouped'])) {
+            $grouped = $entry['_grouped'];
+            $message_content = isset($grouped['textarea']) ? implode(' ', (array) $grouped['textarea']) : '';
+        }
+
+        if (empty($message_content)) {
+            return array('detected' => false);
+        }
+
+        // Check for any email address pattern in message content
+        if (preg_match('/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/', $message_content)) {
+            return array(
+                'detected' => true,
+                'score'    => 20,
+                'reason'   => 'Email address found in message content (not allowed)',
+            );
+        }
+
+        return array('detected' => false);
+    }
+
+    /**
+     * Check for all-caps sentences.
+     *
+     * @param array $entry Entry data.
+     * @return array
+     */
+    private function check_all_caps_sentences($entry)
+    {
+        // Only check textarea content
+        $message_content = '';
+        if (isset($entry['_grouped']) && is_array($entry['_grouped'])) {
+            $grouped = $entry['_grouped'];
+            $message_content = isset($grouped['textarea']) ? implode(' ', (array) $grouped['textarea']) : '';
+        }
+
+        if (empty($message_content)) {
+            return array('detected' => false);
+        }
+
+        // Split into sentences
+        $sentences = preg_split('/[.!?]+/', $message_content);
+
+        foreach ($sentences as $sentence) {
+            $sentence = trim($sentence);
+            if (strlen($sentence) > 10) { // Only check longer sentences
+                // Check if sentence is all caps (excluding punctuation and spaces)
+                $clean_sentence = preg_replace('/[^a-zA-Z]/', '', $sentence);
+                if (!empty($clean_sentence) && $clean_sentence === strtoupper($clean_sentence)) {
+                    return array(
+                        'detected' => true,
+                        'score'    => 25,
+                        'reason'   => 'All-caps sentence detected',
+                    );
+                }
+            }
+        }
+
+        return array('detected' => false);
+    }
+
+    /**
+     * Check for excessive exclamation marks.
+     *
+     * @param array $entry Entry data.
+     * @return array
+     */
+    private function check_excessive_exclamations($entry)
+    {
+        // Only check textarea content
+        $message_content = '';
+        if (isset($entry['_grouped']) && is_array($entry['_grouped'])) {
+            $grouped = $entry['_grouped'];
+            $message_content = isset($grouped['textarea']) ? implode(' ', (array) $grouped['textarea']) : '';
+        }
+
+        if (empty($message_content)) {
+            return array('detected' => false);
+        }
+
+        // Check for 5+ exclamation marks in sequence
+        if (preg_match('/!{5,}/', $message_content)) {
+            return array(
+                'detected' => true,
+                'score'    => 15,
+                'reason'   => 'Excessive exclamation marks (5+ in sequence)',
+            );
+        }
+
+        return array('detected' => false);
+    }
+
+    /**
+     * Check for business spam terminology.
+     *
+     * @param array $entry Entry data.
+     * @return array
+     */
+    private function check_business_terminology($entry)
+    {
+        // Only check textarea content
+        $message_content = '';
+        if (isset($entry['_grouped']) && is_array($entry['_grouped'])) {
+            $grouped = $entry['_grouped'];
+            $message_content = isset($grouped['textarea']) ? implode(' ', (array) $grouped['textarea']) : '';
+        }
+
+        if (empty($message_content)) {
+            return array('detected' => false);
+        }
+
+        $content_lower = strtolower($message_content);
+
+        $business_terms = array(
+            'net 30',
+            'credit application',
+            'purchasing officer',
+            'payment term',
+            'feasible',
+            'dear sales team',
+            'kind regards',
+            'best regards',
+            'ascent resources',
+        );
+
+        $matches = 0;
+        $found_terms = array();
+
+        foreach ($business_terms as $term) {
+            if (strpos($content_lower, $term) !== false) {
+                $matches++;
+                $found_terms[] = $term;
+            }
+        }
+
+        if ($matches > 0) {
+            return array(
+                'detected' => true,
+                'score'    => min($matches * 5, 20), // Max 20 points
+                'reason'   => sprintf('Business terminology found: %s', implode(', ', $found_terms)),
+            );
         }
 
         return array('detected' => false);

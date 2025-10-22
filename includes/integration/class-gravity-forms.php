@@ -66,6 +66,9 @@ class GravityForms
         // Add custom field to track form render time.
         add_filter('gform_pre_render', array($this, 'add_timer_field'));
 
+        // Hook to track successful submissions (after correction of warnings)
+        add_action('gform_after_submission', array($this, 'track_successful_submission'), 10, 2);
+
         // Debug: Log that integration is loaded (only if Logger is available).
         if (defined('WP_DEBUG') && WP_DEBUG && class_exists('GformSpamfighter\Core\Logger')) {
             Logger::get_instance()->info('Gravity Forms integration initialized');
@@ -268,10 +271,18 @@ class GravityForms
         // 2) If soft warning + already has strike → block
         // 3) If hard spam (referrer + other OR high score) → block immediately
         if ($only_soft_warning && $strikes < 1) {
-            // Log this soft warning for review
-            $this->log_spam_attempt($form['id'], $entry, $final_score, $all_results, 'soft_warning');
+            // Save warning data for potential later logging if corrected
+            set_transient(
+                'gform_spamfighter_last_warning_' . $form['id'],
+                array(
+                    'score' => $final_score,
+                    'results' => $all_results,
+                    'timestamp' => time()
+                ),
+                3600 // 1 hour
+            );
 
-            // Send notification if enabled (separate setting for soft warnings)
+            // Send notification if enabled (soft warnings only via email, not saved to DB)
             if ($this->settings['notify_on_spam'] ?? false) {
                 $this->send_notification($form, $entry, $final_score, $all_results, 'soft_warning');
             }
@@ -431,10 +442,9 @@ class GravityForms
                     $value = sanitize_text_field(wp_unslash($value));
                 }
 
-                // Store with field label for better spam detection
+                // Store with field label as main key, include ID in parentheses for clarity
                 $field_label = !empty($field->label) ? $field->label : 'field_' . $field->id;
-                $entry[$field_label] = $value;
-                $entry['field_' . $field->id] = $value; // Also store by ID
+                $entry[$field_label . ' (ID: ' . $field->id . ')'] = $value;
 
                 // Group by GF field type for targeted checks
                 switch ($type) {
@@ -693,7 +703,7 @@ class GravityForms
     }
 
     /**
-     * Check if only soft warning was detected (single link in textarea).
+     * Check if only soft warning was detected (single link in textarea or email in message).
      *
      * @param array $results All detection results.
      * @return bool
@@ -711,14 +721,27 @@ class GravityForms
                         $has_soft_warning = true;
                     }
 
-                    // Any other detection with high score = hard spam
-                    if (
-                        isset($check_result['detected']) && $check_result['detected'] &&
-                        (!isset($check_result['soft_warning']) || !$check_result['soft_warning'])
-                    ) {
-                        // Check if score is high enough to be considered hard spam
-                        if (isset($check_result['score']) && $check_result['score'] >= 30) {
-                            $has_hard_spam = true;
+                    // Check for specific soft warning patterns (links, emails)
+                    if (isset($check_result['detected']) && $check_result['detected']) {
+                        $reason = $check_result['reason'] ?? '';
+
+                        // These are considered soft warnings (user can correct)
+                        if (
+                            strpos($reason, 'Single link in message field') !== false ||
+                            strpos($reason, 'Email address found in message content') !== false
+                        ) {
+                            $has_soft_warning = true;
+                        }
+
+                        // Any other detection with high score = hard spam
+                        if (
+                            strpos($reason, 'Single link in message field') === false &&
+                            strpos($reason, 'Email address found in message content') === false
+                        ) {
+                            // Check if score is high enough to be considered hard spam
+                            if (isset($check_result['score']) && $check_result['score'] >= 30) {
+                                $has_hard_spam = true;
+                            }
                         }
                     }
                 }
@@ -779,5 +802,53 @@ class GravityForms
         }
 
         return 'gform_spam_strike_' . md5($form_id . $ip . $session_id);
+    }
+
+    /**
+     * Track successful submissions to log corrected warnings.
+     *
+     * @param array $entry Entry object.
+     * @param array $form Form object.
+     */
+    public function track_successful_submission($entry, $form)
+    {
+        // Check if this user had a previous warning (strike count > 0)
+        $strikes = $this->get_strike_count($form['id']);
+
+        if ($strikes > 0) {
+            // User had a warning but submitted successfully - log this as corrected
+            $entry_data = $this->get_entry_data($form);
+
+            // Get the last warning details from session/transient
+            $warning_data = get_transient('gform_spamfighter_last_warning_' . $form['id']);
+
+            if ($warning_data) {
+                // Log the successful correction
+                $this->log_spam_attempt(
+                    $form['id'],
+                    $entry_data,
+                    $warning_data['score'],
+                    $warning_data['results'],
+                    'corrected_warning'
+                );
+
+                // Clear the warning data
+                delete_transient('gform_spamfighter_last_warning_' . $form['id']);
+            }
+
+            // Reset strikes since user corrected successfully
+            $this->reset_strikes($form['id']);
+        }
+    }
+
+    /**
+     * Reset strike count for a form.
+     *
+     * @param int $form_id Form ID.
+     */
+    private function reset_strikes($form_id)
+    {
+        $strike_key = $this->get_strike_key($form_id);
+        delete_transient($strike_key);
     }
 }

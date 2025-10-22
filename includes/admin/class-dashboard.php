@@ -253,6 +253,51 @@ class Dashboard
                 </div>
             <?php endif; ?>
 
+            <!-- OpenAI Rate Limits & Usage -->
+            <?php
+            $rate_limits = \GformSpamfighter\Detection\OpenAI::get_rate_limits();
+            if ($rate_limits) :
+            ?>
+                <div class="gform-table-container" style="margin-top: 30px;">
+                    <h2><?php esc_html_e('OpenAI API Rate Limits', 'gform-spamfighter'); ?></h2>
+
+                    <div class="gform-stats-grid">
+                        <?php if ($rate_limits['remaining_requests'] !== null) : ?>
+                            <div class="gform-stat-box">
+                                <div class="gform-stat-value">
+                                    <?php echo esc_html(number_format_i18n($rate_limits['remaining_requests'])); ?>
+                                    / <?php echo esc_html(number_format_i18n($rate_limits['limit_requests'])); ?>
+                                </div>
+                                <div class="gform-stat-label"><?php esc_html_e('Remaining Requests', 'gform-spamfighter'); ?></div>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if ($rate_limits['remaining_tokens'] !== null) : ?>
+                            <div class="gform-stat-box">
+                                <div class="gform-stat-value">
+                                    <?php echo esc_html(number_format_i18n($rate_limits['remaining_tokens'])); ?>
+                                    / <?php echo esc_html(number_format_i18n($rate_limits['limit_tokens'])); ?>
+                                </div>
+                                <div class="gform-stat-label"><?php esc_html_e('Remaining Tokens', 'gform-spamfighter'); ?></div>
+                            </div>
+                        <?php endif; ?>
+
+                        <div class="gform-stat-box">
+                            <div class="gform-stat-value">
+                                <?php echo esc_html(human_time_diff($rate_limits['timestamp'], time())); ?> <?php esc_html_e('ago', 'gform-spamfighter'); ?>
+                            </div>
+                            <div class="gform-stat-label"><?php esc_html_e('Last API Call', 'gform-spamfighter'); ?></div>
+                        </div>
+                    </div>
+
+                    <p class="description" style="margin-top: 10px;">
+                        <?php esc_html_e('Rate limits are updated after each OpenAI API call. Check', 'gform-spamfighter'); ?>
+                        <a href="https://platform.openai.com/usage" target="_blank"><?php esc_html_e('OpenAI Usage Dashboard', 'gform-spamfighter'); ?></a>
+                        <?php esc_html_e('for detailed billing information.', 'gform-spamfighter'); ?>
+                    </p>
+                </div>
+            <?php endif; ?>
+
         </div>
     <?php
     }

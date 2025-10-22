@@ -9,8 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- URL parameter detection now only checks website fields
 - Suspicious number sequence excludes phone/number fields
+
+## [1.0.7] - 2025-10-21
+
+### Fixed
+
+- URL parameter detection now only checks website fields
 - Hidden fields can be excluded via settings
 
 ### Changed
@@ -26,10 +31,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cost estimate disclaimer in OpenAI settings
 - POT file generation system (npm run pot)
 - Languages directory included in releases
-
-## [1.0.7] - 2025-10-21
-
-- Version update
 
 ### Fixed
 

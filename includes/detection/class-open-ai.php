@@ -320,6 +320,9 @@ is_spam should be true if spam_score >= 0.7',
         $body = wp_remote_retrieve_body($response);
         $data = json_decode($body, true);
 
+        // Extract and save rate limit headers for dashboard display.
+        $this->save_rate_limit_headers($response);
+
         return $data;
     }
 
@@ -545,5 +548,38 @@ is_spam should be true if spam_score >= 0.7',
             'is_spam'    => $flagged || $max_score > 0.7,
             'reasoning'  => $flagged ? implode(', ', $flagged_categories) : 'Content appears safe',
         );
+    }
+
+    /**
+     * Save rate limit headers from OpenAI response.
+     *
+     * @param array $response HTTP response from wp_remote_post.
+     */
+    private function save_rate_limit_headers($response)
+    {
+        $headers = wp_remote_retrieve_headers($response);
+
+        $rate_limit_data = array(
+            'timestamp'            => time(),
+            'limit_requests'       => $headers['x-ratelimit-limit-requests'] ?? null,
+            'remaining_requests'   => $headers['x-ratelimit-remaining-requests'] ?? null,
+            'limit_tokens'         => $headers['x-ratelimit-limit-tokens'] ?? null,
+            'remaining_tokens'     => $headers['x-ratelimit-remaining-tokens'] ?? null,
+            'reset_requests'       => $headers['x-ratelimit-reset-requests'] ?? null,
+            'reset_tokens'         => $headers['x-ratelimit-reset-tokens'] ?? null,
+        );
+
+        // Save to transient (expires after 1 hour).
+        set_transient('gform_spamfighter_rate_limits', $rate_limit_data, HOUR_IN_SECONDS);
+    }
+
+    /**
+     * Get current rate limit information.
+     *
+     * @return array|null Rate limit data or null if not available.
+     */
+    public static function get_rate_limits()
+    {
+        return get_transient('gform_spamfighter_rate_limits');
     }
 }
