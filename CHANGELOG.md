@@ -7,14 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.8] - 2025-10-22
 
-- Version update
+### Fixed
 
-
-## [Unreleased]
-
-### fixed
-
+- URL parameter detection now only checks website fields
 - Suspicious number sequence excludes phone/number fields
+- Hidden fields can be excluded via settings
+
+### Changed
+
+- Default block action changed to "mark" instead of "reject"
+- Minimum submission time increased to 5 seconds
+- Hidden fields excluded by default
+
+### Added
+
+- GPT-5 and GPT-5 mini model options
+- Exclude hidden fields setting checkbox
+- Cost estimate disclaimer in OpenAI settings
+- POT file generation system (npm run pot)
+- Languages directory included in releases
 
 ## [1.0.7] - 2025-10-21
 
