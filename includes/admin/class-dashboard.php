@@ -46,6 +46,7 @@ class Dashboard
         add_action('wp_ajax_gform_spamfighter_get_stats', array($this, 'ajax_get_stats'));
         add_action('wp_ajax_gform_spamfighter_get_log_details', array($this, 'ajax_get_log_details'));
         add_action('wp_ajax_gform_spamfighter_clear_strikes', array($this, 'ajax_clear_strikes'));
+        add_action('wp_ajax_gform_spamfighter_run_migration', array($this, 'handle_migration_ajax'));
     }
 
     /**
@@ -116,6 +117,107 @@ class Dashboard
                 'nonce'    => wp_create_nonce('gform_spamfighter_nonce'),
             )
         );
+?>
+        <script type="text/javascript">
+            jQuery(document).ready(function($) {
+                // Migration button handler
+                $('#gform-run-migration').on('click', function() {
+                    var button = $(this);
+                    var resultSpan = $('#gform-migration-result');
+
+                    button.prop('disabled', true).text('🔄 Running Migration...');
+                    resultSpan.text('');
+
+                    $.post(ajaxurl, {
+                        action: 'gform_spamfighter_run_migration',
+                        nonce: '<?php echo wp_create_nonce('gform_migration_nonce'); ?>'
+                    }, function(response) {
+                        if (response.success) {
+                            resultSpan.html('<span style="color: green;">✅ ' + response.data.message + '</span>');
+                            button.text('✅ Migration Complete').removeClass('button-primary').addClass('button-secondary');
+                            // Reload page after 2 seconds to show updated data
+                            setTimeout(function() {
+                                location.reload();
+                            }, 2000);
+                        } else {
+                            resultSpan.html('<span style="color: red;">❌ ' + response.data.message + '</span>');
+                            button.prop('disabled', false).text('🚀 Run Database Migration');
+                        }
+                    }).fail(function() {
+                        resultSpan.html('<span style="color: red;">❌ Migration failed. Please try again.</span>');
+                        button.prop('disabled', false).text('🚀 Run Database Migration');
+                    });
+                });
+
+                // Clear strikes button handler
+                $('#gform-clear-strikes').on('click', function() {
+                    var button = $(this);
+                    var resultSpan = $('#gform-clear-strikes-result');
+
+                    button.prop('disabled', true).text('🔄 Clearing...');
+                    resultSpan.text('');
+
+                    $.post(ajaxurl, {
+                        action: 'gform_spamfighter_clear_strikes',
+                        nonce: '<?php echo wp_create_nonce('gform_spamfighter_nonce'); ?>'
+                    }, function(response) {
+                        if (response.success) {
+                            resultSpan.html('<span style="color: green;">✅ ' + response.data.message + '</span>');
+                        } else {
+                            resultSpan.html('<span style="color: red;">❌ ' + response.data.message + '</span>');
+                        }
+                        button.prop('disabled', false).text('🔓 Clear All Strikes (Testing)');
+                    });
+                });
+
+                // View details button handler
+                $('.gform-view-details').on('click', function() {
+                    var logId = $(this).data('log-id');
+                    var button = $(this);
+
+                    button.prop('disabled', true).text('🔄 Loading...');
+
+                    $.post(ajaxurl, {
+                        action: 'gform_spamfighter_get_log_details',
+                        log_id: logId,
+                        nonce: '<?php echo wp_create_nonce('gform_spamfighter_nonce'); ?>'
+                    }, function(response) {
+                        if (response.success) {
+                            var log = response.data;
+                            var details = '<div style="background: #f9f9f9; padding: 15px; margin: 10px 0; border-left: 4px solid #0073aa;">';
+                            details += '<h4>📋 Submission Details</h4>';
+                            details += '<p><strong>Form:</strong> ' + log.form_name + '</p>';
+                            details += '<p><strong>Score:</strong> ' + log.spam_score + '</p>';
+                            details += '<p><strong>Method:</strong> ' + log.detection_method + '</p>';
+                            details += '<p><strong>Action:</strong> ' + log.action_taken + '</p>';
+
+                            if (log.submission_data && typeof log.submission_data === 'object') {
+                                details += '<h4>📝 Submitted Data:</h4>';
+                                details += '<pre style="background: white; padding: 10px; border: 1px solid #ddd; max-height: 300px; overflow-y: auto;">';
+                                details += JSON.stringify(log.submission_data, null, 2);
+                                details += '</pre>';
+                            }
+
+                            if (log.detection_details && typeof log.detection_details === 'object') {
+                                details += '<h4>🔍 Detection Details:</h4>';
+                                details += '<pre style="background: white; padding: 10px; border: 1px solid #ddd; max-height: 300px; overflow-y: auto;">';
+                                details += JSON.stringify(log.detection_details, null, 2);
+                                details += '</pre>';
+                            }
+
+                            details += '</div>';
+
+                            // Show in modal or replace button content
+                            button.closest('td').html(details);
+                        } else {
+                            alert('Error loading details: ' + response.data.message);
+                            button.prop('disabled', false).text('👁️ View Details');
+                        }
+                    });
+                });
+            });
+        </script>
+    <?php
     }
 
     /**
@@ -130,9 +232,11 @@ class Dashboard
         $db    = Database::get_instance();
         $stats = $db->get_statistics(30);
 
-?>
+    ?>
         <div class="wrap gform-spamfighter-dashboard">
             <h1><?php esc_html_e('GFORM Spamfighter Dashboard', 'gform-spamfighter'); ?></h1>
+
+            <?php $this->render_migration_button(); ?>
 
             <div style="margin-bottom: 20px;">
                 <button type="button" id="gform-clear-strikes" class="button button-secondary">
@@ -226,7 +330,7 @@ class Dashboard
                     <table class="wp-list-table widefat fixed striped">
                         <thead>
                             <tr>
-                                <th><?php esc_html_e('Form ID', 'gform-spamfighter'); ?></th>
+                                <th><?php esc_html_e('Source', 'gform-spamfighter'); ?></th>
                                 <th><?php esc_html_e('Form Name', 'gform-spamfighter'); ?></th>
                                 <th><?php esc_html_e('Spam Count', 'gform-spamfighter'); ?></th>
                             </tr>
@@ -234,16 +338,21 @@ class Dashboard
                         <tbody>
                             <?php foreach ($stats['by_form'] as $form) : ?>
                                 <?php
+                                $source_type = $form['source_type'] ?? 'gravity_forms';
+                                $source_id = $form['source_id'] ?? $form['form_id'] ?? 'N/A';
                                 $form_name = 'Unknown';
-                                if (class_exists('GFAPI')) {
-                                    $gf_form = \GFAPI::get_form($form['form_id']);
+
+                                if ($source_type === 'gravity_forms' && class_exists('GFAPI')) {
+                                    $gf_form = \GFAPI::get_form($source_id);
                                     if ($gf_form) {
                                         $form_name = $gf_form['title'];
                                     }
+                                } else {
+                                    $form_name = ucfirst(str_replace('_', ' ', $source_type)) . ' #' . $source_id;
                                 }
                                 ?>
                                 <tr>
-                                    <td><?php echo esc_html($form['form_id']); ?></td>
+                                    <td><?php echo esc_html($source_id); ?></td>
                                     <td><?php echo esc_html($form_name); ?></td>
                                     <td><?php echo esc_html(number_format_i18n($form['count'])); ?></td>
                                 </tr>
@@ -331,7 +440,7 @@ class Dashboard
                 <thead>
                     <tr>
                         <th><?php esc_html_e('Date', 'gform-spamfighter'); ?></th>
-                        <th><?php esc_html_e('Form ID', 'gform-spamfighter'); ?></th>
+                        <th><?php esc_html_e('Source', 'gform-spamfighter'); ?></th>
                         <th><?php esc_html_e('Score', 'gform-spamfighter'); ?></th>
                         <th><?php esc_html_e('Detection Method', 'gform-spamfighter'); ?></th>
                         <th><?php esc_html_e('IP Address', 'gform-spamfighter'); ?></th>
@@ -349,7 +458,13 @@ class Dashboard
                         <?php foreach ($logs as $log) : ?>
                             <tr>
                                 <td><?php echo esc_html(mysql2date(get_option('date_format') . ' ' . get_option('time_format'), $log['created_at'])); ?></td>
-                                <td><?php echo esc_html($log['form_id']); ?></td>
+                                <td>
+                                    <?php
+                                    $source_type = $log['source_type'] ?? 'gravity_forms';
+                                    $source_id = $log['source_id'] ?? $log['form_id'] ?? 'N/A';
+                                    echo esc_html(ucfirst(str_replace('_', ' ', $source_type)) . ' #' . $source_id);
+                                    ?>
+                                </td>
                                 <td><?php echo esc_html(number_format($log['spam_score'], 2)); ?></td>
                                 <td><?php echo esc_html($log['detection_method']); ?></td>
                                 <td><?php echo esc_html($log['user_ip']); ?></td>
@@ -385,7 +500,7 @@ class Dashboard
             }
             ?>
         </div>
-<?php
+        <?php
     }
 
     /**
@@ -439,24 +554,79 @@ class Dashboard
             wp_send_json_error(array('message' => 'Log not found'));
         }
 
-        // Decode JSON fields
-        if (! empty($log['entry_data'])) {
-            $log['entry_data'] = json_decode($log['entry_data'], true);
+        // Decode JSON fields (support both old and new structure)
+        $submission_data = $log['submission_data'] ?? $log['entry_data'] ?? '';
+        if (! empty($submission_data)) {
+            $log['submission_data'] = json_decode($submission_data, true);
         }
         if (! empty($log['detection_details'])) {
             $log['detection_details'] = json_decode($log['detection_details'], true);
         }
 
-        // Get form name if available
+        // Get form name if available (support both old and new structure)
         $log['form_name'] = 'Unknown';
-        if (class_exists('GFAPI')) {
-            $gf_form = \GFAPI::get_form($log['form_id']);
+        $source_type = $log['source_type'] ?? 'gravity_forms';
+        $source_id = $log['source_id'] ?? $log['form_id'] ?? 0;
+
+        if ($source_type === 'gravity_forms' && class_exists('GFAPI')) {
+            $gf_form = \GFAPI::get_form($source_id);
             if ($gf_form) {
                 $log['form_name'] = $gf_form['title'];
             }
+        } else {
+            $log['form_name'] = ucfirst(str_replace('_', ' ', $source_type)) . ' #' . $source_id;
         }
 
         wp_send_json_success($log);
+    }
+
+    /**
+     * Render migration button if needed.
+     */
+    private function render_migration_button()
+    {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'gform_spam_logs';
+
+        // Check if migration is needed
+        $has_old_columns = $wpdb->get_results("SHOW COLUMNS FROM {$table_name} LIKE 'form_id'");
+        $has_new_columns = $wpdb->get_results("SHOW COLUMNS FROM {$table_name} LIKE 'source_type'");
+
+        // Only show button if old columns exist but new ones don't
+        if (!empty($has_old_columns) && empty($has_new_columns)) {
+        ?>
+            <div class="notice notice-warning" style="margin-bottom: 20px;">
+                <p>
+                    <strong><?php esc_html_e('Database Migration Required', 'gform-spamfighter'); ?></strong><br>
+                    <?php esc_html_e('Your database needs to be updated to support multiple form systems (Gravity Forms, Contact Form 7, Comments).', 'gform-spamfighter'); ?>
+                </p>
+                <button type="button" id="gform-run-migration" class="button button-primary">
+                    <?php esc_html_e('🚀 Run Database Migration', 'gform-spamfighter'); ?>
+                </button>
+                <span id="gform-migration-result" style="margin-left:10px;"></span>
+            </div>
+<?php
+        }
+    }
+
+    /**
+     * Handle migration AJAX request.
+     */
+    public function handle_migration_ajax()
+    {
+        if (! current_user_can('manage_options') || ! wp_verify_nonce($_POST['nonce'], 'gform_migration_nonce')) {
+            wp_send_json_error(array('message' => 'Unauthorized'));
+        }
+
+        $db = Database::get_instance();
+        $result = $db->run_migration_manual();
+
+        if ($result['success']) {
+            wp_send_json_success($result);
+        } else {
+            wp_send_json_error($result);
+        }
     }
 
     /**

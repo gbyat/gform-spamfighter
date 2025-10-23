@@ -61,8 +61,9 @@ class Database
 
         $sql = "CREATE TABLE IF NOT EXISTS {$this->table_name} (
 			id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-			form_id bigint(20) UNSIGNED NOT NULL,
-			entry_data longtext NOT NULL,
+			source_type varchar(50) NOT NULL DEFAULT 'gravity_forms',
+			source_id bigint(20) UNSIGNED NOT NULL,
+			submission_data longtext NOT NULL,
 			spam_score float NOT NULL DEFAULT 0,
 			detection_method varchar(255) NOT NULL,
 			detection_details longtext,
@@ -73,14 +74,18 @@ class Database
             action_taken varchar(50) NOT NULL DEFAULT 'rejected',
 			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY  (id),
-			KEY form_id (form_id),
+			KEY source_type (source_type),
+			KEY source_id (source_id),
 			KEY created_at (created_at),
 			KEY spam_score (spam_score),
-			KEY site_id (site_id)
+			KEY site_id (site_id),
+			KEY source_combo (source_type, source_id)
 		) $charset_collate;";
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
+
+        // Migration is now handled via button in dashboard
     }
 
     /**
@@ -94,8 +99,9 @@ class Database
         global $wpdb;
 
         $defaults = array(
-            'form_id'           => 0,
-            'entry_data'        => '',
+            'source_type'       => 'gravity_forms',
+            'source_id'         => 0,
+            'submission_data'   => '',
             'spam_score'        => 0,
             'detection_method'  => '',
             'detection_details' => '',
@@ -109,8 +115,8 @@ class Database
         $data = wp_parse_args($data, $defaults);
 
         // Serialize complex data.
-        if (is_array($data['entry_data'])) {
-            $data['entry_data'] = wp_json_encode($data['entry_data']);
+        if (is_array($data['submission_data'])) {
+            $data['submission_data'] = wp_json_encode($data['submission_data']);
         }
         if (is_array($data['detection_details'])) {
             $data['detection_details'] = wp_json_encode($data['detection_details']);
@@ -126,8 +132,9 @@ class Database
             $this->table_name,
             $data,
             array(
-                '%d', // form_id.
-                '%s', // entry_data.
+                '%s', // source_type.
+                '%d', // source_id.
+                '%s', // submission_data.
                 '%f', // spam_score.
                 '%s', // detection_method.
                 '%s', // detection_details.
@@ -401,5 +408,140 @@ class Database
         }
 
         return $ip;
+    }
+
+    /**
+     * Migrate existing data to new structure.
+     */
+    private function migrate_existing_data()
+    {
+        global $wpdb;
+
+        // Check if migration is needed
+        $has_old_columns = $wpdb->get_results("SHOW COLUMNS FROM {$this->table_name} LIKE 'form_id'");
+        $has_new_columns = $wpdb->get_results("SHOW COLUMNS FROM {$this->table_name} LIKE 'source_type'");
+
+        // If old columns exist but new ones don't, run migration
+        if (!empty($has_old_columns) && empty($has_new_columns)) {
+            $this->run_migration();
+        }
+    }
+
+    /**
+     * Run the actual migration.
+     */
+    private function run_migration()
+    {
+        global $wpdb;
+
+        // Log migration start
+        error_log('GForm Spamfighter: Starting database migration...');
+
+        // Check if columns already exist to avoid errors
+        $has_source_type = $wpdb->get_results("SHOW COLUMNS FROM {$this->table_name} LIKE 'source_type'");
+        $has_source_id = $wpdb->get_results("SHOW COLUMNS FROM {$this->table_name} LIKE 'source_id'");
+        $has_submission_data = $wpdb->get_results("SHOW COLUMNS FROM {$this->table_name} LIKE 'submission_data'");
+
+        // Add new columns only if they don't exist
+        if (empty($has_source_type)) {
+            $result = $wpdb->query("ALTER TABLE {$this->table_name} ADD COLUMN source_type varchar(50) DEFAULT 'gravity_forms'");
+            error_log('GForm Spamfighter: Added source_type column. Result: ' . ($result ? 'success' : 'failed'));
+        }
+
+        if (empty($has_source_id)) {
+            $result = $wpdb->query("ALTER TABLE {$this->table_name} ADD COLUMN source_id bigint(20) UNSIGNED DEFAULT 0");
+            error_log('GForm Spamfighter: Added source_id column. Result: ' . ($result ? 'success' : 'failed'));
+        }
+
+        if (empty($has_submission_data)) {
+            $result = $wpdb->query("ALTER TABLE {$this->table_name} ADD COLUMN submission_data longtext");
+            error_log('GForm Spamfighter: Added submission_data column. Result: ' . ($result ? 'success' : 'failed'));
+        }
+
+        // Migrate existing data
+        $result = $wpdb->query("UPDATE {$this->table_name} SET source_id = form_id WHERE source_type = 'gravity_forms'");
+        error_log('GForm Spamfighter: Migrated source_id data. Affected rows: ' . $result);
+
+        $result = $wpdb->query("UPDATE {$this->table_name} SET submission_data = entry_data WHERE source_type = 'gravity_forms'");
+        error_log('GForm Spamfighter: Migrated submission_data. Affected rows: ' . $result);
+
+        // Add new indexes (ignore errors if they already exist)
+        $wpdb->query("ALTER TABLE {$this->table_name} ADD INDEX source_type (source_type)");
+        $wpdb->query("ALTER TABLE {$this->table_name} ADD INDEX source_id (source_id)");
+        $wpdb->query("ALTER TABLE {$this->table_name} ADD INDEX source_combo (source_type, source_id)");
+
+        // Log migration completion
+        error_log('GForm Spamfighter: Database migration completed successfully');
+    }
+
+    /**
+     * Run migration manually (for button-triggered migration).
+     */
+    public function run_migration_manual()
+    {
+        global $wpdb;
+
+        try {
+            // Log migration start
+            error_log('GForm Spamfighter: Starting manual database migration...');
+
+            // Check if columns already exist to avoid errors
+            $has_source_type = $wpdb->get_results("SHOW COLUMNS FROM {$this->table_name} LIKE 'source_type'");
+            $has_source_id = $wpdb->get_results("SHOW COLUMNS FROM {$this->table_name} LIKE 'source_id'");
+            $has_submission_data = $wpdb->get_results("SHOW COLUMNS FROM {$this->table_name} LIKE 'submission_data'");
+
+            $results = array();
+
+            // Add new columns only if they don't exist
+            if (empty($has_source_type)) {
+                $result = $wpdb->query("ALTER TABLE {$this->table_name} ADD COLUMN source_type varchar(50) DEFAULT 'gravity_forms'");
+                $results[] = 'Added source_type column: ' . ($result ? 'success' : 'failed');
+            } else {
+                $results[] = 'source_type column already exists';
+            }
+
+            if (empty($has_source_id)) {
+                $result = $wpdb->query("ALTER TABLE {$this->table_name} ADD COLUMN source_id bigint(20) UNSIGNED DEFAULT 0");
+                $results[] = 'Added source_id column: ' . ($result ? 'success' : 'failed');
+            } else {
+                $results[] = 'source_id column already exists';
+            }
+
+            if (empty($has_submission_data)) {
+                $result = $wpdb->query("ALTER TABLE {$this->table_name} ADD COLUMN submission_data longtext");
+                $results[] = 'Added submission_data column: ' . ($result ? 'success' : 'failed');
+            } else {
+                $results[] = 'submission_data column already exists';
+            }
+
+            // Migrate existing data
+            $migrated_rows = $wpdb->query("UPDATE {$this->table_name} SET source_id = form_id WHERE source_type = 'gravity_forms'");
+            $results[] = "Migrated source_id data: {$migrated_rows} rows affected";
+
+            $migrated_rows = $wpdb->query("UPDATE {$this->table_name} SET submission_data = entry_data WHERE source_type = 'gravity_forms'");
+            $results[] = "Migrated submission_data: {$migrated_rows} rows affected";
+
+            // Add new indexes (ignore errors if they already exist)
+            $wpdb->query("ALTER TABLE {$this->table_name} ADD INDEX source_type (source_type)");
+            $wpdb->query("ALTER TABLE {$this->table_name} ADD INDEX source_id (source_id)");
+            $wpdb->query("ALTER TABLE {$this->table_name} ADD INDEX source_combo (source_type, source_id)");
+
+            // Log migration completion
+            error_log('GForm Spamfighter: Manual database migration completed successfully');
+
+            return array(
+                'success' => true,
+                'message' => 'Database migration completed successfully!',
+                'details' => $results
+            );
+        } catch (Exception $e) {
+            error_log('GForm Spamfighter: Migration error: ' . $e->getMessage());
+
+            return array(
+                'success' => false,
+                'message' => 'Migration failed: ' . $e->getMessage(),
+                'details' => $results ?? array()
+            );
+        }
     }
 }
