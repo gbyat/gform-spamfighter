@@ -1,6 +1,6 @@
 {
   "name": "gform-spamfighter",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Advanced spam protection for Gravity Forms with multi-layer detection",
   "main": "gform-spamfighter.php",
   "scripts": {

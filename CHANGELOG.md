@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### Added
+
+- Duplicate message detection (80 points, 24h tracking)
+- Email address detection in message content (20 points, not allowed)
+- All-caps sentences detection (25 points)
+- Excessive exclamation marks detection (15 points, 5+ in sequence)
+- Business terminology detection (5-20 points)
+- Improved soft warning detection for links and emails
+- All new patterns only check textarea content for better accuracy
+
+## [1.0.9] - 2025-10-23
+
+- Add advanced spam detection patterns
+- Update CHANGELOG for v1.0.8 with detailed changes
+
+
 ## [1.0.8] - 2025-10-22
 
 ### Fixed
