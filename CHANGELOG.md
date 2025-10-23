@@ -15,11 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved soft warning detection for links and emails
 - All new patterns only check textarea content for better accuracy
 
-## [1.0.10] - 2025-10-23
-
-- Implement database migration support and update logging structure
-
-
 ## [1.0.9] - 2025-10-23
 
 - Add advanced spam detection patterns
