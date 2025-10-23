@@ -574,9 +574,8 @@ class GravityForms
 
         $insert_id = $db->log_spam(
             array(
-                'source_type'       => 'gravity_forms',
-                'source_id'         => $form_id,
-                'submission_data'   => $entry,
+                'form_id'           => $form_id,
+                'entry_data'        => $entry,
                 'spam_score'        => $score,
                 'detection_method'  => implode(', ', $detection_methods),
                 'detection_details' => $results,
