@@ -128,8 +128,8 @@ class PatternAnalyzer
         // Count all links in text/textarea content
         $link_count = preg_match_all($link_pattern, $text_content);
 
-        // Debug logging
-        if (defined('WP_DEBUG') && WP_DEBUG && $link_count > 0) {
+        // Debug logging (avoid direct constant reference for linters)
+        if (defined('WP_DEBUG') && (bool) constant('WP_DEBUG') && $link_count > 0) {
             error_log('GFORM: Link detection - Count: ' . $link_count . ', Content: ' . substr($text_content, 0, 200));
         }
 
@@ -553,23 +553,47 @@ class PatternAnalyzer
             return array('detected' => false);
         }
 
-        // Create hash of message content
-        $message_hash = md5(strtolower(trim($message_content)));
-        $duplicate_key = 'gform_spamfighter_message_' . $message_hash;
+        // Determine submitter identifier to scope duplicates cautiously
+        $submitter_id = '';
+        // Prefer email if available
+        if (isset($entry['_grouped']['email']) && is_array($entry['_grouped']['email']) && !empty($entry['_grouped']['email'][0])) {
+            $submitter_id = strtolower(trim($entry['_grouped']['email'][0]));
+        } else {
+            // Fallback: scan flat entry for any email-like value
+            foreach ($entry as $val) {
+                if (is_string($val) && is_email($val)) {
+                    $submitter_id = strtolower(trim($val));
+                    break;
+                }
+            }
+        }
 
-        // Check if this exact message was submitted before
+        // If no email, cautiously fall back to IP if available
+        if (empty($submitter_id)) {
+            $ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '';
+            $submitter_id = $ip;
+        }
+
+        // Create hash of message content and scope by submitter identifier
+        $message_hash = md5(strtolower(trim($message_content)));
+        $scope_hash   = md5((string) $submitter_id);
+        $duplicate_key = 'gform_spamfighter_message_' . $message_hash . '_' . $scope_hash;
+
+        // Check if this exact message was submitted before by the same submitter
         $previous_submission = get_transient($duplicate_key);
 
         if ($previous_submission) {
+            // Lower score to avoid blocking solely on a single duplicate
             return array(
                 'detected' => true,
-                'score'    => 80,
-                'reason'   => 'Identical message submitted before',
+                'score'    => 40,
+                'reason'   => 'Identical message submitted previously by same submitter',
             );
         }
 
-        // Store this message hash for 24 hours
-        set_transient($duplicate_key, time(), DAY_IN_SECONDS);
+        // Store this message hash for 24 hours for this submitter
+        $day_in_seconds = defined('DAY_IN_SECONDS') ? (int) constant('DAY_IN_SECONDS') : 86400;
+        set_transient($duplicate_key, time(), $day_in_seconds);
 
         return array('detected' => false);
     }
