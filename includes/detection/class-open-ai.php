@@ -157,13 +157,22 @@ class OpenAI
     {
         $content_parts = array();
 
-        foreach ($entry as $field_id => $value) {
-            if (is_array($value)) {
-                $value = implode(', ', $value);
+        foreach ($entry as $field_key => $value) {
+            // Skip helper/technical keys (e.g., _grouped) completely
+            if (is_string($field_key) && strpos($field_key, '_') === 0) {
+                continue;
             }
 
-            // Skip empty values and technical fields.
-            if (empty($value) || is_numeric($field_id)) {
+            // Recursively flatten arrays to scalars
+            if (is_array($value)) {
+                $flat_values = $this->flatten_to_strings($value);
+                $value = implode(', ', array_filter($flat_values, function ($v) {
+                    return $v !== '' && $v !== null;
+                }));
+            }
+
+            // Skip empty values and purely numeric keys
+            if ($value === '' || $value === null || is_numeric($field_key)) {
                 continue;
             }
 
@@ -171,6 +180,32 @@ class OpenAI
         }
 
         return implode("\n", $content_parts);
+    }
+
+    /**
+     * Flatten nested arrays to a list of strings.
+     *
+     * @param mixed $value Any value.
+     * @return array List of string values.
+     */
+    private function flatten_to_strings($value)
+    {
+        $result = array();
+
+        if (is_array($value)) {
+            foreach ($value as $v) {
+                $result = array_merge($result, $this->flatten_to_strings($v));
+            }
+        } elseif (is_scalar($value)) {
+            $string = (string) $value;
+            // Basic sanitization to avoid control characters
+            $string = sanitize_text_field($string);
+            if ($string !== '') {
+                $result[] = $string;
+            }
+        }
+
+        return $result;
     }
 
     /**
