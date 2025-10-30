@@ -54,6 +54,15 @@ class PatternAnalyzer
             'suspicious_keywords'  => $this->check_suspicious_keywords($entry),
             'suspicious_patterns'  => $this->check_suspicious_patterns($entry),
 
+            // Disallow contact info in single-line text fields
+            'url_in_text'          => $this->check_url_in_text_fields($entry),
+            'email_in_text'        => $this->check_email_in_text_fields($entry),
+            'phone_in_text'        => $this->check_phone_in_text_fields($entry),
+
+            // Length limits for single-line text fields
+            'text_length_limits'   => $this->check_text_length_limits($entry),
+            'text_min_length'      => $this->check_text_min_length($entry),
+
             // New advanced checks
             'duplicate_message'    => $this->check_duplicate_message($entry),
             'email_in_message'     => $this->check_email_in_message($entry),
@@ -63,9 +72,11 @@ class PatternAnalyzer
 
             // Email-specific
             'email_pattern'        => $this->check_email_pattern($entry),
+            'email_field_validity' => $this->check_email_field_validity($entry),
 
             // URL-specific (runs strict rules)
             'url_pattern'          => $this->check_url_pattern($entry),
+            'website_field_validity' => $this->check_website_field_validity($entry),
 
             // Generic
             'excessive_links'      => $this->check_excessive_links($entry),
@@ -149,6 +160,205 @@ class PatternAnalyzer
                 'detected' => true,
                 'score'    => 30,
                 'reason'   => sprintf('Multiple links detected (%d)', $link_count),
+            );
+        }
+
+        return array('detected' => false);
+    }
+
+    /**
+     * Enforce sensible max lengths for single-line text fields.
+     * Defaults via filters:
+     * - gform_spamfighter_text_warn_chars (default 120)
+     * - gform_spamfighter_text_block_chars (default 240)
+     * - gform_spamfighter_text_warn_words (default 12)
+     * - gform_spamfighter_text_block_words (default 24)
+     *
+     * Soft warning at warn thresholds (score 20), stronger at block thresholds (score 40).
+     *
+     * @param array $entry Entry data.
+     * @return array
+     */
+    private function check_text_length_limits($entry)
+    {
+        if (!isset($entry['_grouped']['text']) || !is_array($entry['_grouped']['text'])) {
+            return array('detected' => false);
+        }
+
+        $text_values = array_filter((array) $entry['_grouped']['text'], function ($v) {
+            return is_string($v) && $v !== '';
+        });
+        if (empty($text_values)) {
+            return array('detected' => false);
+        }
+
+        $warn_chars  = (int) apply_filters('gform_spamfighter_text_warn_chars', 120);
+        $block_chars = (int) apply_filters('gform_spamfighter_text_block_chars', 240);
+        $warn_words  = (int) apply_filters('gform_spamfighter_text_warn_words', 12);
+        $block_words = (int) apply_filters('gform_spamfighter_text_block_words', 24);
+
+        $highest_level = 0; // 0 none, 1 warn, 2 block
+        $hit_details   = array();
+
+        foreach ($text_values as $value) {
+            $length = strlen($value);
+            $words  = preg_split('/\s+/u', trim($value));
+            $word_count = is_array($words) ? count(array_filter($words)) : 0;
+
+            if ($length > $block_chars || $word_count > $block_words) {
+                $highest_level = max($highest_level, 2);
+                $hit_details[] = sprintf('"%s" (%d chars, %d words) over block threshold', mb_substr($value, 0, 50), $length, $word_count);
+            } elseif ($length > $warn_chars || $word_count > $warn_words) {
+                $highest_level = max($highest_level, 1);
+                $hit_details[] = sprintf('"%s" (%d chars, %d words) over warn threshold', mb_substr($value, 0, 50), $length, $word_count);
+            }
+        }
+
+        if ($highest_level === 0) {
+            return array('detected' => false);
+        }
+
+        if ($highest_level === 1) {
+            return array(
+                'detected'     => true,
+                'score'        => 20,
+                'reason'       => 'Long content in single-line text field (warning)',
+                'soft_warning' => true,
+                'details'      => $hit_details,
+            );
+        }
+
+        return array(
+            'detected' => true,
+            'score'    => 40,
+            'reason'   => 'Excessively long content in single-line text field',
+            'details'  => $hit_details,
+        );
+    }
+
+    /**
+     * Enforce a minimum length for single-line text fields.
+     * Filter: gform_spamfighter_text_min_chars (default 3)
+     *
+     * @param array $entry Entry data.
+     * @return array
+     */
+    private function check_text_min_length($entry)
+    {
+        if (!isset($entry['_grouped']['text']) || !is_array($entry['_grouped']['text'])) {
+            return array('detected' => false);
+        }
+
+        $min_chars = (int) apply_filters('gform_spamfighter_text_min_chars', 3);
+        if ($min_chars < 1) {
+            $min_chars = 1;
+        }
+
+        $short_samples = array();
+        foreach ((array) $entry['_grouped']['text'] as $value) {
+            if (!is_string($value)) {
+                continue;
+            }
+            $len = strlen(trim($value));
+            if ($len > 0 && $len < $min_chars) {
+                $short_samples[] = sprintf('"%s" (%d chars)', mb_substr($value, 0, 20), $len);
+            }
+        }
+
+        if (empty($short_samples)) {
+            return array('detected' => false);
+        }
+
+        // Soft warning to allow correction; combines with other signals if needed
+        return array(
+            'detected'     => true,
+            'score'        => 20,
+            'reason'       => sprintf('Single-line text too short (< %d chars)', $min_chars),
+            'soft_warning' => true,
+            'details'      => $short_samples,
+        );
+    }
+
+    /**
+     * Disallow URLs in single-line text fields.
+     * One occurrence = soft warning (score 40). Multiple types will sum toward blocking.
+     *
+     * @param array $entry Entry data.
+     * @return array
+     */
+    private function check_url_in_text_fields($entry)
+    {
+        if (!isset($entry['_grouped']['text']) || !is_array($entry['_grouped']['text'])) {
+            return array('detected' => false);
+        }
+
+        $text_values = (array) $entry['_grouped']['text'];
+        $content     = implode(' ', $text_values);
+
+        $url_pattern = '/(https?:\/\/[^\s]+|www\.[^\s]+|(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?)/i';
+        if (preg_match($url_pattern, $content)) {
+            return array(
+                'detected'     => true,
+                'score'        => 40,
+                'reason'       => 'URL found in single-line text field',
+                'soft_warning' => true,
+            );
+        }
+
+        return array('detected' => false);
+    }
+
+    /**
+     * Disallow email addresses in single-line text fields.
+     *
+     * @param array $entry Entry data.
+     * @return array
+     */
+    private function check_email_in_text_fields($entry)
+    {
+        if (!isset($entry['_grouped']['text']) || !is_array($entry['_grouped']['text'])) {
+            return array('detected' => false);
+        }
+
+        $text_values = (array) $entry['_grouped']['text'];
+        $content     = implode(' ', $text_values);
+
+        if (preg_match('/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/', $content)) {
+            return array(
+                'detected'     => true,
+                'score'        => 40,
+                'reason'       => 'Email address found in single-line text field',
+                'soft_warning' => true,
+            );
+        }
+
+        return array('detected' => false);
+    }
+
+    /**
+     * Disallow phone numbers in single-line text fields.
+     * Uses a conservative pattern: sequences with 7+ digits allowing separators.
+     *
+     * @param array $entry Entry data.
+     * @return array
+     */
+    private function check_phone_in_text_fields($entry)
+    {
+        if (!isset($entry['_grouped']['text']) || !is_array($entry['_grouped']['text'])) {
+            return array('detected' => false);
+        }
+
+        $text_values = (array) $entry['_grouped']['text'];
+        $content     = implode(' ', $text_values);
+
+        // Matches e.g. +43 660 1234567, (06151) 321509, 0688-205-181, 770 978 0991
+        $phone_pattern = '/(?:(?:\+|00)?\d{1,3}[\s.-]?)?(?:\(?\d{2,4}\)?[\s.-]?)?\d(?:[\s.-]?\d){6,}/';
+        if (preg_match($phone_pattern, $content)) {
+            return array(
+                'detected'     => true,
+                'score'        => 40,
+                'reason'       => 'Phone number found in single-line text field',
+                'soft_warning' => true,
             );
         }
 
@@ -473,6 +683,108 @@ class PatternAnalyzer
                 'detected' => true,
                 'score'    => min($score, 100),
                 'reason'   => implode(', ', array_unique($reasons)),
+            );
+        }
+
+        return array('detected' => false);
+    }
+
+    /**
+     * Validate website field(s): must be proper URLs and must not be email addresses.
+     *
+     * @param array $entry Entry data.
+     * @return array
+     */
+    private function check_website_field_validity($entry)
+    {
+        if (!isset($entry['_grouped']['website']) || !is_array($entry['_grouped']['website'])) {
+            return array('detected' => false);
+        }
+
+        $issues  = array();
+        $score   = 0;
+        foreach ((array) $entry['_grouped']['website'] as $url) {
+            if (!is_string($url) || $url === '') {
+                continue;
+            }
+
+            // Email mistakenly in website field
+            if (preg_match('/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/', $url)) {
+                $issues[] = 'Email address provided in website field';
+                $score    = max($score, 40);
+                continue;
+            }
+
+            // Invalid URL format (allow missing scheme but must resemble domain.tld)
+            $valid = filter_var($url, FILTER_VALIDATE_URL);
+            if (!$valid) {
+                // Accept bare domains like example.com optionally with path
+                if (!preg_match('/^(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[\S]*)?$/i', $url)) {
+                    $issues[] = 'Invalid website URL format';
+                    $score    = max($score, 20);
+                }
+            }
+        }
+
+        if (!empty($issues)) {
+            return array(
+                'detected'     => true,
+                'score'        => min($score, 60),
+                'reason'       => implode('; ', array_unique($issues)),
+                'soft_warning' => $score <= 20,
+            );
+        }
+
+        return array('detected' => false);
+    }
+
+    /**
+     * Validate email field(s): must be valid email and not contain URLs.
+     *
+     * @param array $entry Entry data.
+     * @return array
+     */
+    private function check_email_field_validity($entry)
+    {
+        // Collect email-like fields either from grouping or flat scan fallback
+        $emails = array();
+        if (isset($entry['_grouped']['email']) && is_array($entry['_grouped']['email'])) {
+            $emails = (array) $entry['_grouped']['email'];
+        } else {
+            foreach ($entry as $value) {
+                if (is_string($value) && is_email($value)) {
+                    $emails[] = $value;
+                }
+            }
+        }
+
+        if (empty($emails)) {
+            return array('detected' => false);
+        }
+
+        $issues = array();
+        $score  = 0;
+        foreach ($emails as $email) {
+            if (!is_string($email) || $email === '') {
+                continue;
+            }
+            // Contains URL pattern → clearly wrong
+            if (preg_match('/https?:\/\//i', $email) || preg_match('/www\./i', $email)) {
+                $issues[] = 'URL found in email field';
+                $score    = max($score, 40);
+            }
+            // Validate email format
+            if (!is_email($email)) {
+                $issues[] = 'Invalid email address format';
+                $score    = max($score, 40);
+            }
+        }
+
+        if (!empty($issues)) {
+            return array(
+                'detected' => true,
+                'score'    => min($score, 60),
+                'reason'   => implode('; ', array_unique($issues)),
             );
         }
 
