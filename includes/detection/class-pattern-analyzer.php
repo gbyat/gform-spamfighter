@@ -295,6 +295,10 @@ class PatternAnalyzer
         $text_values = (array) $entry['_grouped']['text'];
         $content     = implode(' ', $text_values);
 
+        // Whitelist ISO date-time tokens like 2025-11-26|08:00 or 2025-11-26 08:00 or 2025-11-26T08:00
+        $iso_dt_pattern = '/\b\d{4}-\d{2}-\d{2}[ T\|]\d{2}:\d{2}\b/';
+        $content_sanitized = preg_replace($iso_dt_pattern, '', $content);
+
         $url_pattern = '/(https?:\/\/[^\s]+|www\.[^\s]+|(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?)/i';
         if (preg_match($url_pattern, $content)) {
             return array(
@@ -353,7 +357,7 @@ class PatternAnalyzer
 
         // Matches e.g. +43 660 1234567, (06151) 321509, 0688-205-181, 770 978 0991
         $phone_pattern = '/(?:(?:\+|00)?\d{1,3}[\s.-]?)?(?:\(?\d{2,4}\)?[\s.-]?)?\d(?:[\s.-]?\d){6,}/';
-        if (preg_match($phone_pattern, $content)) {
+        if (preg_match($phone_pattern, $content_sanitized)) {
             return array(
                 'detected'     => true,
                 'score'        => 40,

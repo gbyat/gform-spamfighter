@@ -4,7 +4,7 @@
 **Tags:** spam, gravity forms, anti-spam, openai, ai detection, form protection, spam filter  
 **Requires at least:** 6.0  
 **Tested up to:** 6.8  
-**Stable tag:** 1.0.14  
+**Stable tag:** 1.0.15  
 **Requires PHP:** 8.0  
 **License:** GPL v2 or later  
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
