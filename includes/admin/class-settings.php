@@ -57,11 +57,13 @@ class Settings
      */
     public function add_menu()
     {
-        add_options_page(
-            __('GFORM Spamfighter', 'gform-spamfighter'),
-            __('Spamfighter', 'gform-spamfighter'),
+        // Register settings as a submenu under the top-level Spamfighter menu
+        add_submenu_page(
+            'gform-spamfighter-dashboard',
+            __('Settings', 'gform-spamfighter'),
+            __('Settings', 'gform-spamfighter'),
             'manage_options',
-            'gform-spamfighter',
+            'gform-spamfighter-settings',
             array($this, 'render_settings_page')
         );
     }
@@ -73,7 +75,8 @@ class Settings
      */
     public function enqueue_scripts($hook)
     {
-        if ('settings_page_gform-spamfighter' !== $hook) {
+        // Load on any Spamfighter admin page (dashboard, logs, settings, classifier)
+        if (strpos($hook, 'gform-spamfighter') === false) {
             return;
         }
 
@@ -548,7 +551,7 @@ class Settings
 
 ?>
         <div class="wrap">
-            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+            <h1><?php esc_html_e('Spamfighter Settings', 'gform-spamfighter'); ?></h1>
 
             <?php settings_errors(); ?>
 

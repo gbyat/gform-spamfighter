@@ -80,6 +80,8 @@ class Dashboard
             'gform-spamfighter-logs',
             array($this, 'render_logs')
         );
+
+        // Placeholder: Classifier submenu will be provided by Classifier class
     }
 
     /**
@@ -235,7 +237,7 @@ class Dashboard
                             <?php foreach ($stats['by_form'] as $form) : ?>
                                 <?php
                                 $form_name = 'Unknown';
-                                if (class_exists('GFAPI')) {
+                                if (class_exists('\\GFAPI')) {
                                     $gf_form = \GFAPI::get_form($form['form_id']);
                                     if ($gf_form) {
                                         $form_name = $gf_form['title'];
@@ -432,7 +434,7 @@ class Dashboard
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table query, no caching needed for single log detail.
         $log = $wpdb->get_row(
             $wpdb->prepare("SELECT * FROM {$table_name} WHERE id = %d", $log_id),
-            ARRAY_A
+            \ARRAY_A
         );
 
         if (! $log) {
@@ -449,7 +451,7 @@ class Dashboard
 
         // Get form name if available
         $log['form_name'] = 'Unknown';
-        if (class_exists('GFAPI')) {
+        if (class_exists('\\GFAPI')) {
             $gf_form = \GFAPI::get_form($log['form_id']);
             if ($gf_form) {
                 $log['form_name'] = $gf_form['title'];
