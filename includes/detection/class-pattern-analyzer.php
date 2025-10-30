@@ -1076,9 +1076,19 @@ class PatternAnalyzer
     {
         $content_parts = array();
 
-        foreach ($entry as $value) {
+        foreach ($entry as $key => $value) {
+            // Skip grouped helper structure to avoid counting labels/arrays as text
+            if ($key === '_grouped') {
+                continue;
+            }
+
             if (is_array($value)) {
-                $value = implode(' ', $value);
+                // Flatten only string leaves; do not cast arrays to strings
+                $flat = $this->flatten_string_values($value);
+                if (!empty($flat)) {
+                    $content_parts[] = implode(' ', $flat);
+                }
+                continue;
             }
 
             if (is_string($value)) {
@@ -1087,5 +1097,28 @@ class PatternAnalyzer
         }
 
         return implode(' ', $content_parts);
+    }
+
+    /**
+     * Recursively collect string leaves from a mixed array value.
+     *
+     * @param mixed $value
+     * @return array
+     */
+    private function flatten_string_values($value)
+    {
+        $result = array();
+        if (is_array($value)) {
+            foreach ($value as $v) {
+                if (is_array($v)) {
+                    $result = array_merge($result, $this->flatten_string_values($v));
+                } elseif (is_string($v)) {
+                    $result[] = $v;
+                }
+            }
+        } elseif (is_string($value)) {
+            $result[] = $value;
+        }
+        return $result;
     }
 }
