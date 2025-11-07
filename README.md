@@ -4,7 +4,7 @@
 **Tags:** spam, gravity forms, anti-spam, openai, ai detection, form protection, spam filter  
 **Requires at least:** 6.0  
 **Tested up to:** 6.8  
-**Stable tag:** 1.0.15  
+**Stable tag:** 1.1.0  
 **Requires PHP:** 8.0  
 **License:** GPL v2 or later  
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
@@ -25,7 +25,7 @@ GForm Spamfighter is a comprehensive WordPress plugin designed to combat modern 
   - URLs with parameters (tracking/affiliate links)
   - URL shorteners and suspicious TLDs
   - Disposable email addresses (tempmail.com, etc.)
-  - Excessive links or capital letters
+  - Field-aware checks (links/emails/phones handled differently in text vs. message fields)
   - Minimum word count in textareas
 
 - **Intelligent Behavior Analysis**
@@ -34,12 +34,12 @@ GForm Spamfighter is a comprehensive WordPress plugin designed to combat modern 
   - Known spam referrers (syndicatedsearch.goog, semalt.com, etc.)
   - User agent analysis (bot detection)
   - Language consistency (multisite-aware)
-  - Duplicate submission detection
+  - Duplicate submission detection per submitter (email/IP scoped)
 
-- **User-Friendly Soft Warnings**
-  - Single link in text → Friendly warning, allows correction
-  - Strike system: 2nd attempt → Form locked for 15 minutes
-  - Clear messages guide users to fix issues
+- **Silent Soft Warnings**
+  - Low-risk signals are logged but do not interrupt the user
+  - Optional OpenAI check still receives the full context for a final verdict
+  - Admins can review soft warning details inside the spam logs
 
 ### ⭐ Optional AI Enhancement
 
@@ -142,27 +142,51 @@ OpenAI is only called when pattern detection is uncertain (saves 70%+ API costs)
 
 1. **Fast Free Checks** (< 100ms)
 
-   - Pattern detection analyzes content
-   - Behavior analysis checks timing/referrer
-   - Duplicate check compares recent submissions
+   - Pattern detection analyzes content (field-aware rules)
+   - Behavior analysis checks timing/referrer/user agent/language
+   - Duplicate check compares recent submissions per submitter
    - Score calculated (0.0 - 1.0)
 
 2. **Smart AI Decision** (optional)
 
    - If score ≥ 0.7: **SPAM!** (OpenAI skipped, cost saved)
-   - If score < 0.7: **Call OpenAI** for second opinion
+   - If score < 0.7: **Call OpenAI** for a second opinion
 
 3. **User-Friendly Handling**
-   - **Single link only:** Soft warning, can correct
-   - **Multiple spam signals:** Hard block
-   - **2nd spam attempt:** Form locked 15 minutes
+
+   - Low-level warnings are silent (submission continues)
+   - Severe pattern detections or OpenAI spam verdicts trigger a hard block
+   - Strike/lockout system only applies after hard spam decisions
 
 ### Field-Type Specific Detection
 
-- **Text/Textarea:** Word count, keywords, patterns
-- **Email:** Disposable domain detection
-- **URL/Website:** Parameter checking, shortener detection, suspicious TLDs
-- **All Fields:** Link detection, language consistency
+- **Single-line text fields**
+
+  - URLs, email addresses, and phone numbers trigger a soft warning (user not blocked)
+  - Excessive length, suspicious keywords, and number-sequence patterns
+  - Duplicate-check helper (per submitter, 24h scope by default)
+
+- **Message / textarea fields**
+
+  - Minimum word count (default 5 words) → hard block if not met
+  - Up to one link and one email/phone allowed; additional matches become soft warnings
+  - Business-terminology, repetition, excessive punctuation, suspicious number-sequence checks
+
+- **Email fields**
+
+  - Standard validation plus disposable-domain detection
+  - URLs mistakenly supplied in email fields trigger a hard block
+
+- **Website / URL fields**
+
+  - Rejects URLs containing parameters, raw IP hosts, suspicious TLDs, or known shorteners
+  - Email addresses placed in URL fields trigger a warning/block
+
+- **Global checks (all fields)**
+
+  - Behavior analysis: timing, language, referrer, user agent
+  - Strike/lockout management for repeated hard-spam attempts
+  - Optional OpenAI verdict treated as hard spam
 
 ## Configuration Options
 
@@ -255,9 +279,9 @@ Perfect for international websites with multiple language versions:
 
 ### Soft Warning System
 
-- Single link in message → Friendly warning, not immediate block
-- User can correct and resubmit
-- 2nd attempt with same issue → Form locked
+- Low-risk findings (e.g., single link in text field) are logged silently
+- Submissions continue so the visitor never sees an interruption
+- Admins can review soft-warning details in the spam logs and adjust rules if needed
 
 ### Strike System
 

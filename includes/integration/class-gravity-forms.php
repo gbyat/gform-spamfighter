@@ -35,6 +35,13 @@ class GravityForms
     private $settings;
 
     /**
+     * Forms marked as spam (to ensure entries are created even when rejected).
+     *
+     * @var array
+     */
+    private $spam_forms = array();
+
+    /**
      * Get instance.
      *
      * @return GravityForms
@@ -69,8 +76,17 @@ class GravityForms
         // Hook to track successful submissions (after correction of warnings)
         add_action('gform_after_submission', array($this, 'track_successful_submission'), 10, 2);
 
+        // Hook to mark entries as spam after creation
+        add_filter('gform_entry_is_spam', array($this, 'mark_entry_as_spam'), 10, 3);
+
+        // Hook to ensure spam entries are marked as spam after creation
+        add_action('gform_after_submission', array($this, 'ensure_spam_marked'), 5, 2);
+
+        // Hook to show error message for rejected spam submissions
+        add_filter('gform_confirmation', array($this, 'show_spam_rejection_message'), 10, 4);
+
         // Debug: Log that integration is loaded (only if Logger is available).
-        if (defined('WP_DEBUG') && WP_DEBUG && class_exists('GformSpamfighter\Core\Logger')) {
+        if (defined('WP_DEBUG') && \WP_DEBUG && class_exists('GformSpamfighter\Core\Logger')) {
             Logger::get_instance()->info('Gravity Forms integration initialized');
         }
     }
@@ -148,7 +164,7 @@ class GravityForms
     public function validate_submission($validation_result)
     {
         // Debug: Log that validation hook was called.
-        if (defined('WP_DEBUG') && WP_DEBUG && class_exists('GformSpamfighter\Core\Logger')) {
+        if (defined('WP_DEBUG') && \WP_DEBUG && class_exists('GformSpamfighter\Core\Logger')) {
             Logger::get_instance()->info('Validation hook called');
         }
 
@@ -267,49 +283,26 @@ class GravityForms
         error_log('GFORM: only_soft_warning=' . ($only_soft_warning ? 'YES' : 'NO') . ', strikes=' . $strikes);
 
         // Decision logic:
-        // 1) If only soft warning + no strikes yet → friendly warning, allow correction
-        // 2) If soft warning + already has strike → block
-        // 3) If hard spam (referrer + other OR high score) → block immediately
-        if ($only_soft_warning && $strikes < 1) {
-            // Save warning data for potential later logging if corrected
-            set_transient(
-                'gform_spamfighter_last_warning_' . $form['id'],
-                array(
-                    'score' => $final_score,
-                    'results' => $all_results,
-                    'timestamp' => time()
-                ),
-                3600 // 1 hour
-            );
-
-            // Send notification if enabled (soft warnings only via email, not saved to DB)
-            if ($this->settings['notify_on_spam'] ?? false) {
-                $this->send_notification($form, $entry, $final_score, $all_results, 'soft_warning');
+        if ($only_soft_warning) {
+            if (class_exists('GformSpamfighter\Core\Logger')) {
+                Logger::get_instance()->info(
+                    'Soft warning detected; submission allowed',
+                    array(
+                        'form_id' => $form['id'],
+                        'warnings' => $all_results,
+                    )
+                );
             }
 
-            // Give user a chance to correct
-            $validation_result['is_valid'] = false;
-
-            foreach ($form['fields'] as &$field) {
-                if (!$field->failed_validation && $field->type === 'textarea') {
-                    $field->failed_validation  = true;
-                    $field->validation_message = apply_filters(
-                        'gform_spamfighter_soft_warning_message',
-                        __('Please remove any links from your message. Links are not allowed in this field.', 'gform-spamfighter')
-                    );
-                    break;
-                }
+            // Ensure any previous strikes do not linger
+            if ($strikes > 0) {
+                $this->reset_strikes($form['id']);
+                $strikes = 0;
             }
-
-            // Record soft warning (add strike)
-            $this->add_strike($form['id']);
-
-            $validation_result['form'] = $form;
-            return $validation_result;
         }
 
-        // If has strikes → force block (2nd attempt after soft warning)
-        if ($strikes >= 1) {
+        // If has strikes → force block (legacy behaviour, only when not a soft warning)
+        if (!$only_soft_warning && $strikes >= 1) {
             $is_spam = true;
             error_log('GFORM: User has strikes (' . $strikes . ') - FORCING BLOCK!');
         }
@@ -328,11 +321,19 @@ class GravityForms
 
         if ($is_spam) {
             error_log('GFORM: BLOCKING submission as spam!');
+
+            // Store form ID and spam data to ensure entry is created even if rejected
+            $this->spam_forms[$form['id']] = array(
+                'entry' => $entry,
+                'score' => $final_score,
+                'results' => $all_results,
+            );
+
             // Log spam attempt to database.
             $log_result = $this->log_spam_attempt($form['id'], $entry, $final_score, $all_results);
 
             // Debug: Verify logging worked
-            if (defined('WP_DEBUG') && WP_DEBUG) {
+            if (defined('WP_DEBUG') && \WP_DEBUG) {
                 error_log('GFORM: Spam logged to database. Insert ID: ' . ($log_result ? $log_result : 'FAILED'));
             }
 
@@ -344,33 +345,15 @@ class GravityForms
             // Handle based on block action.
             $block_action = $this->settings['block_action'] ?? 'reject';
 
+            // IMPORTANT: Always allow entry creation, even when rejecting
+            // The entry will be marked as spam via gform_entry_is_spam filter
+            // We keep is_valid = true to ensure entry is created
             if ('reject' === $block_action) {
-                $validation_result['is_valid'] = false;
-
-                foreach ($form['fields'] as &$field) {
-                    if (! $field->failed_validation) {
-                        $field->failed_validation  = true;
-                        $field->validation_message = apply_filters(
-                            'gform_spamfighter_validation_message',
-                            __('Your submission has been identified as spam. If you believe this is an error, please contact us directly.', 'gform-spamfighter')
-                        );
-                        break; // Only show error on first field.
-                    }
-                }
-            } else {
-                // Mark as spam but allow submission.
-                add_filter(
-                    'gform_entry_is_spam',
-                    function ($is_spam, $form_obj, $entry_obj) use ($form) {
-                        if ($form_obj['id'] === $form['id']) {
-                            return true;
-                        }
-                        return $is_spam;
-                    },
-                    10,
-                    3
-                );
+                // Entry will be created but marked as spam
+                // User will see error message via confirmation filter
+                // Don't set is_valid = false, as that would prevent entry creation
             }
+            // For 'mark' action, entry is created normally and marked as spam via filter
         }
 
         $validation_result['form'] = $form;
@@ -470,7 +453,7 @@ class GravityForms
         $entry['_grouped'] = $grouped;
 
         // Debug: Log what we got
-        if (defined('WP_DEBUG') && WP_DEBUG && class_exists('GformSpamfighter\Core\Logger')) {
+        if (defined('WP_DEBUG') && \WP_DEBUG && class_exists('GformSpamfighter\Core\Logger')) {
             Logger::get_instance()->info(
                 'Extracted entry data',
                 array(
@@ -648,7 +631,7 @@ class GravityForms
         $enabled = ! empty($this->settings['enabled']);
 
         // Debug logging.
-        if (defined('WP_DEBUG') && WP_DEBUG && class_exists('GformSpamfighter\Core\Logger')) {
+        if (defined('WP_DEBUG') && \WP_DEBUG && class_exists('GformSpamfighter\Core\Logger')) {
             Logger::get_instance()->info(
                 'Checking if spam protection is enabled',
                 array(
@@ -713,7 +696,26 @@ class GravityForms
         $has_soft_warning = false;
         $has_hard_spam    = false;
 
+        // Check OpenAI result first - if OpenAI detects spam, it's always hard spam
+        if (isset($results['openai'])) {
+            $openai_result = $results['openai'];
+            $threshold = floatval($this->settings['ai_threshold'] ?? 0.7);
+
+            if (isset($openai_result['is_spam']) && $openai_result['is_spam']) {
+                $has_hard_spam = true;
+                error_log('GFORM: OpenAI detected spam (is_spam=true) - treating as hard spam');
+            } elseif (isset($openai_result['score']) && $openai_result['score'] >= $threshold) {
+                $has_hard_spam = true;
+                error_log('GFORM: OpenAI score (' . $openai_result['score'] . ') >= threshold (' . $threshold . ') - treating as hard spam');
+            }
+        }
+
         foreach ($results as $method => $result) {
+            // Skip OpenAI - already checked above
+            if ($method === 'openai') {
+                continue;
+            }
+
             // Check in details array for soft_warning flag
             if (isset($result['details']) && is_array($result['details'])) {
                 foreach ($result['details'] as $check_name => $check_result) {
@@ -779,7 +781,7 @@ class GravityForms
         $strikes = $this->get_strike_count($form_id);
 
         // Increment and store for 15 minutes (good balance: deters spammers, allows real users to retry)
-        $lockout_time = apply_filters('gform_spamfighter_strike_lockout_seconds', 15 * MINUTE_IN_SECONDS);
+        $lockout_time = apply_filters('gform_spamfighter_strike_lockout_seconds', 15 * \MINUTE_IN_SECONDS);
         set_transient($key, $strikes + 1, $lockout_time);
     }
 
@@ -839,6 +841,19 @@ class GravityForms
             // Reset strikes since user corrected successfully
             $this->reset_strikes($form['id']);
         }
+
+        // Optionally log all allowed submissions for full capture, regardless of protection state
+        $log_all = (bool) ($this->settings['log_all_submissions'] ?? false);
+        if ($log_all) {
+            $entry_data = $this->get_entry_data($form);
+            $this->log_spam_attempt(
+                $form['id'],
+                $entry_data,
+                0,
+                array(),
+                'allowed'
+            );
+        }
     }
 
     /**
@@ -850,5 +865,89 @@ class GravityForms
     {
         $strike_key = $this->get_strike_key($form_id);
         delete_transient($strike_key);
+    }
+
+    /**
+     * Ensure spam entries are marked as spam after creation.
+     *
+     * @param array $entry Entry object.
+     * @param array $form Form object.
+     */
+    public function ensure_spam_marked($entry, $form)
+    {
+        // Check if this entry's form was marked as spam
+        $form_id = isset($entry['form_id']) ? $entry['form_id'] : (isset($form['id']) ? $form['id'] : 0);
+
+        if ($form_id > 0 && isset($this->spam_forms[$form_id])) {
+            // Mark entry as spam using GFAPI
+            if (isset($entry['id']) && class_exists('\GFAPI')) {
+                $result = \GFAPI::mark_entry_spam($entry['id'], true);
+
+                if (is_wp_error($result)) {
+                    error_log('GFORM: Failed to mark entry as spam: ' . $result->get_error_message());
+                } else {
+                    error_log('GFORM: Entry ' . $entry['id'] . ' marked as spam successfully');
+                }
+            }
+
+            // Clear the stored data after use
+            unset($this->spam_forms[$form_id]);
+        }
+    }
+
+    /**
+     * Mark entry as spam if it was detected as spam.
+     *
+     * @param bool  $is_spam Current spam status.
+     * @param array $entry Entry object.
+     * @param array $form Form object.
+     * @return bool True if entry is spam.
+     */
+    public function mark_entry_as_spam($is_spam, $entry, $form)
+    {
+        // Check if this entry's form was marked as spam
+        $form_id = isset($entry['form_id']) ? $entry['form_id'] : (isset($form['id']) ? $form['id'] : 0);
+
+        if ($form_id > 0 && isset($this->spam_forms[$form_id])) {
+            // Don't clear here - let ensure_spam_marked() handle it after entry is created
+            return true;
+        }
+
+        return $is_spam;
+    }
+
+    /**
+     * Show rejection message for spam submissions.
+     *
+     * @param array|string $confirmation Confirmation message or redirect.
+     * @param array        $form Form object.
+     * @param array        $entry Entry object.
+     * @param bool         $ajax Whether form was submitted via AJAX.
+     * @return array|string Modified confirmation.
+     */
+    public function show_spam_rejection_message($confirmation, $form, $entry, $ajax)
+    {
+        // Check if this entry was marked as spam and block_action is 'reject'
+        $block_action = $this->settings['block_action'] ?? 'reject';
+
+        if ('reject' === $block_action && isset($entry['id'])) {
+            // Check if entry is marked as spam
+            $is_spam = \GFAPI::entry_is_spam($entry['id']);
+
+            if ($is_spam) {
+                $message = apply_filters(
+                    'gform_spamfighter_validation_message',
+                    __('Your submission has been identified as spam. If you believe this is an error, please contact us directly.', 'gform-spamfighter')
+                );
+
+                // Return error message as confirmation
+                return array(
+                    'type' => 'message',
+                    'message' => '<div class="gform_spamfighter_error" style="color: #d63638; padding: 10px; background: #fcf0f1; border: 1px solid #d63638; border-radius: 4px; margin: 10px 0;">' . esc_html($message) . '</div>',
+                );
+            }
+        }
+
+        return $confirmation;
     }
 }

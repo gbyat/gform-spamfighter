@@ -109,57 +109,76 @@ class PatternAnalyzer
      */
     private function check_excessive_links($entry)
     {
-        // Check in text AND textarea fields (not in dedicated URL fields)
-        $text_content = '';
-        if (isset($entry['_grouped']) && is_array($entry['_grouped'])) {
-            $text_values = array_merge(
-                isset($entry['_grouped']['text']) ? (array) $entry['_grouped']['text'] : array(),
-                isset($entry['_grouped']['textarea']) ? (array) $entry['_grouped']['textarea'] : array()
-            );
-            $text_content = implode(' ', $text_values);
-        }
+        $link_pattern = '/(https?:\/\/[\S]+|www\.[^\s]+|(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?)/i';
 
-        // Fallback: all content except URL fields
-        if (empty($text_content)) {
-            foreach ($entry as $key => $value) {
-                if ($key === '_grouped' || !is_string($value)) {
-                    continue;
-                }
-                // Skip values that are pure URLs or emails
-                if (filter_var($value, FILTER_VALIDATE_URL) && strlen($value) < 100) {
-                    continue; // likely a URL field
-                }
-                $text_content .= ' ' . $value;
+        $text_link_count     = 0;
+        $textarea_link_count = 0;
+
+        if (isset($entry['_grouped']) && is_array($entry['_grouped'])) {
+            $text_values = isset($entry['_grouped']['text']) ? (array) $entry['_grouped']['text'] : array();
+            $text_content = implode(' ', $text_values);
+
+            if ($text_content !== '') {
+                $text_link_count = preg_match_all($link_pattern, $text_content);
+            }
+
+            $textarea_values = isset($entry['_grouped']['textarea']) ? (array) $entry['_grouped']['textarea'] : array();
+            $textarea_content = implode(' ', $textarea_values);
+
+            if ($textarea_content !== '') {
+                $textarea_link_count = preg_match_all($link_pattern, $textarea_content);
             }
         }
 
-        // Extended pattern: catch http://, https://, www., and domain-like patterns (e.g. gby.at)
-        $link_pattern = '/(https?:\/\/[^\s]+|www\.[^\s]+|(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?)/i';
+        // Fallback for legacy entries without grouping: treat long strings as textarea and short as text
+        if (!isset($entry['_grouped'])) {
+            foreach ($entry as $value) {
+                if (!is_string($value) || $value === '') {
+                    continue;
+                }
 
-        // Count all links in text/textarea content
-        $link_count = preg_match_all($link_pattern, $text_content);
-
-        // Debug logging (avoid direct constant reference for linters)
-        if (defined('WP_DEBUG') && (bool) constant('WP_DEBUG') && $link_count > 0) {
-            error_log('GFORM: Link detection - Count: ' . $link_count . ', Content: ' . substr($text_content, 0, 200));
+                if (strlen($value) <= 120) {
+                    $text_link_count += preg_match_all($link_pattern, $value);
+                } else {
+                    $textarea_link_count += preg_match_all($link_pattern, $value);
+                }
+            }
         }
 
-        // Single link = soft warning (allow correction)
-        if ($link_count === 1) {
+        if (defined('WP_DEBUG') && (bool) constant('WP_DEBUG')) {
+            if ($text_link_count > 0) {
+                error_log('GFORM: Link detection (text fields) - Count: ' . $text_link_count);
+            }
+            if ($textarea_link_count > 0) {
+                error_log('GFORM: Link detection (textarea) - Count: ' . $textarea_link_count);
+            }
+        }
+
+        // Single-line text fields remain strict
+        if ($text_link_count === 1) {
             return array(
                 'detected'     => true,
-                'score'        => 20, // Low score - allows for other checks to override
+                'score'        => 20,
                 'reason'       => 'Single link in text field',
-                'soft_warning' => true, // Special flag for lenient handling
+                'soft_warning' => true,
             );
         }
 
-        // Multiple links = hard spam
-        if ($link_count > 1) {
+        if ($text_link_count > 1) {
             return array(
                 'detected' => true,
                 'score'    => 30,
-                'reason'   => sprintf('Multiple links detected (%d)', $link_count),
+                'reason'   => sprintf('Multiple links detected in text fields (%d)', $text_link_count),
+            );
+        }
+
+        // Allow one link in message content; flag only when multiple links appear
+        if ($textarea_link_count > 1) {
+            return array(
+                'detected'     => true,
+                'score'        => 20,
+                'reason'       => sprintf('Multiple links detected in message (%d)', $textarea_link_count),
+                'soft_warning' => true,
             );
         }
 
@@ -933,16 +952,18 @@ class PatternAnalyzer
             return array('detected' => false);
         }
 
-        // Check for any email address pattern in message content
-        if (preg_match('/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/', $message_content)) {
-            return array(
-                'detected' => true,
-                'score'    => 20,
-                'reason'   => 'Email address found in message content (not allowed)',
-            );
+        $match_count = preg_match_all('/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/', $message_content);
+
+        if ($match_count <= 1) {
+            return array('detected' => false);
         }
 
-        return array('detected' => false);
+        return array(
+            'detected'     => true,
+            'score'        => 20,
+            'reason'       => sprintf('Multiple email addresses found in message (%d)', $match_count),
+            'soft_warning' => true,
+        );
     }
 
     /**
