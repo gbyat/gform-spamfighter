@@ -374,9 +374,13 @@ class PatternAnalyzer
         $text_values = (array) $entry['_grouped']['text'];
         $content     = implode(' ', $text_values);
 
+        // Whitelist ISO date-time tokens like 2025-11-26|08:00 or 2025-11-26 08:00 or 2025-11-26T08:00
+        $iso_dt_pattern   = '/\b\d{4}-\d{2}-\d{2}[ T\|]\d{2}:\d{2}\b/';
+        $content_sanitized = preg_replace($iso_dt_pattern, '', $content);
+
         // Matches e.g. +43 660 1234567, (06151) 321509, 0688-205-181, 770 978 0991
         $phone_pattern = '/(?:(?:\+|00)?\d{1,3}[\s.-]?)?(?:\(?\d{2,4}\)?[\s.-]?)?\d(?:[\s.-]?\d){6,}/';
-        if (preg_match($phone_pattern, $content_sanitized)) {
+        if (!empty($content_sanitized) && preg_match($phone_pattern, $content_sanitized)) {
             return array(
                 'detected'     => true,
                 'score'        => 40,
@@ -441,9 +445,10 @@ class PatternAnalyzer
 
         if ($word_count < $min_words) {
             return array(
-                'detected' => true,
-                'score'    => 80, // decisive for too-short text content
-                'reason'   => sprintf('Not enough words in text fields (%d < %d)', $word_count, $min_words),
+                'detected'     => true,
+                'score'        => 20,
+                'reason'       => sprintf('Not enough words in text fields (%d < %d)', $word_count, $min_words),
+                'soft_warning' => true,
             );
         }
 
