@@ -155,24 +155,14 @@ class PatternAnalyzer
         }
 
         // Single-line text fields remain strict
-        if ($text_link_count === 1) {
-            return array(
-                'detected'     => true,
-                'score'        => 20,
-                'reason'       => 'Single link in text field',
-                'soft_warning' => true,
-            );
-        }
-
-        if ($text_link_count > 1) {
+        if ($text_link_count > 0) {
             return array(
                 'detected' => true,
-                'score'    => 30,
-                'reason'   => sprintf('Multiple links detected in text fields (%d)', $text_link_count),
+                'score'    => 60,
+                'reason'   => sprintf('URL found in single-line text fields (%d)', $text_link_count),
             );
         }
 
-        // Allow one link in message content; flag only when multiple links appear
         if ($textarea_link_count > 1) {
             return array(
                 'detected'     => true,
@@ -346,12 +336,13 @@ class PatternAnalyzer
         $text_values = (array) $entry['_grouped']['text'];
         $content     = implode(' ', $text_values);
 
-        if (preg_match('/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/', $content)) {
+        $match_count = preg_match_all('/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/', $content);
+
+        if ($match_count > 0) {
             return array(
-                'detected'     => true,
-                'score'        => 40,
-                'reason'       => 'Email address found in single-line text field',
-                'soft_warning' => true,
+                'detected' => true,
+                'score'    => 60,
+                'reason'   => sprintf('Email address found in single-line text fields (%d)', $match_count),
             );
         }
 
@@ -572,6 +563,16 @@ class PatternAnalyzer
         // Fallback if no grouped data.
         if (empty($text_content)) {
             $text_content = $this->get_text_content($entry);
+        }
+
+        // Remove dedicated phone field values from the text content to avoid double-counting
+        if (isset($grouped['phone']) && is_array($grouped['phone'])) {
+            foreach ((array) $grouped['phone'] as $phone_value) {
+                if (!is_string($phone_value) || $phone_value === '') {
+                    continue;
+                }
+                $text_content = str_replace($phone_value, '', $text_content);
+            }
         }
 
         $patterns = array(

@@ -375,6 +375,7 @@ class GravityForms
             'textarea' => array(),
             'email'    => array(),
             'website'  => array(),
+            'phone'    => array(),
         );
 
         foreach ($form['fields'] as $field) {
@@ -440,6 +441,12 @@ class GravityForms
                         break;
                     case 'textarea':
                         $grouped['textarea'][] = $value;
+                        break;
+                    case 'phone':
+                        if (! isset($grouped['phone'])) {
+                            $grouped['phone'] = array();
+                        }
+                        $grouped['phone'][] = $value;
                         break;
                     case 'text':
                     default:
