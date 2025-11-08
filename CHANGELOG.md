@@ -5,10 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0] - 2025-11-07
+## [1.1.1] - 2025-11-08
 
 - Version update
 
+
+## [1.1.0] - 2025-11-07
+
+### Added
+
+- Documented full detection rule set (field-specific behavior, soft warning handling) in `README.md`.
+
+### Changed
+
+- Treat OpenAI spam verdicts as hard detections, bypassing the soft-warning path.
+- Soft warnings are now silent: submissions continue, warnings are only logged for admins.
+- Allow a single link/email/phone number inside textarea content while keeping strict rules for single-line fields.
+- Updated plugin header metadata (`Tested up to 6.8`, version bump to 1.1.0).
+
+### Fixed
+
+- Prevent ISO date/time strings from being flagged as phone numbers in text fields.
+- Ensure all submissions (even when rejected) are stored as Gravity Forms entries and logged in the spam table.
 
 ## [1.0.15] - 2025-10-30
 
