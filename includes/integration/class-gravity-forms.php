@@ -175,6 +175,15 @@ class GravityForms
             return $validation_result;
         }
 
+        // Respect Gravity Forms native validation first. If it already failed,
+        // skip our spam checks so the user sees the original field errors.
+        if (isset($validation_result['is_valid']) && false === $validation_result['is_valid']) {
+            if (class_exists('GformSpamfighter\Core\Logger')) {
+                Logger::get_instance()->info('Skipping spam check because GF validation failed');
+            }
+            return $validation_result;
+        }
+
         $form  = $validation_result['form'];
         $entry = $this->get_entry_data($form);
 
