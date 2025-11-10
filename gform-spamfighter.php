@@ -4,7 +4,7 @@
  * Plugin Name: GForm Spamfighter
  * Plugin URI: https://github.com/gbyat/gform-spamfighter
  * Description: Advanced spam protection for Gravity Forms using AI detection, pattern analysis, and behavior monitoring
- * Version: 1.1.5
+ * Version: 1.2.0
  * Author: webentwicklerin, Gabriele Laesser
  * Author URI: https://webentwicklerin.at
  * Text Domain: gform-spamfighter
@@ -26,7 +26,7 @@ if (! defined('ABSPATH')) {
 }
 
 // Define plugin constants.
-define('GFORM_SPAMFIGHTER_VERSION', '1.1.5');
+define('GFORM_SPAMFIGHTER_VERSION', '1.2.0');
 define('GFORM_SPAMFIGHTER_PLUGIN_FILE', __FILE__);
 define('GFORM_SPAMFIGHTER_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('GFORM_SPAMFIGHTER_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -67,6 +67,8 @@ spl_autoload_register(
         }
     }
 );
+
+// Temporary shutdown logger disabled while debugging WooCommerce conflict.
 
 /**
  * Main plugin class.
@@ -144,8 +146,11 @@ class Plugin
      */
     public function init_github_updater()
     {
-        // Only load in admin or when checking for updates.
-        if (is_admin() || wp_doing_cron()) {
+        if (! (is_admin() || wp_doing_cron())) {
+            return;
+        }
+
+        if (class_exists('GformSpamfighter\\Core\\Updater')) {
             new Core\Updater(GFORM_SPAMFIGHTER_PLUGIN_FILE);
         }
     }
@@ -219,7 +224,8 @@ class Plugin
 
         // Schedule daily cleanup if not already scheduled.
         if (! wp_next_scheduled('gform_spamfighter_clean_logs')) {
-            wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', 'gform_spamfighter_clean_logs');
+            $hour_in_seconds = \defined('HOUR_IN_SECONDS') ? \constant('HOUR_IN_SECONDS') : 3600;
+            wp_schedule_event(time() + $hour_in_seconds, 'daily', 'gform_spamfighter_clean_logs');
         }
     }
 
@@ -310,7 +316,7 @@ class Plugin
         $deleted = Core\Database::get_instance()->clean_old_logs($days);
 
         // Optional: debug log
-        if (defined('WP_DEBUG') && WP_DEBUG) {
+        if (\defined('WP_DEBUG') && \constant('WP_DEBUG')) {
             Core\Logger::get_instance()->info('Cron: cleaned old spam logs', array('retention_days' => $days, 'deleted_rows' => (int) $deleted));
         }
     }

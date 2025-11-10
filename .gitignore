@@ -35,3 +35,5 @@ wp-config-sample.php
 
 # Composer (not used in this plugin)
 composer.lock
+.user.ini
+debug.log
