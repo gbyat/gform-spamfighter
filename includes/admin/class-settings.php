@@ -224,111 +224,113 @@ class Settings
             )
         );
 
-        // Pattern detection section.
-        add_settings_section(
-            'gform_spamfighter_pattern',
-            __('Pattern Detection', 'gform-spamfighter'),
-            array($this, 'render_pattern_section'),
-            'gform-spamfighter'
-        );
+        if (apply_filters('gform_spamfighter_show_pattern_settings', false)) {
+            add_settings_section(
+                'gform_spamfighter_pattern',
+                __('Pattern Detection', 'gform-spamfighter'),
+                array($this, 'render_pattern_section'),
+                'gform-spamfighter'
+            );
 
-        add_settings_field(
-            'pattern_check_enabled',
-            __('Enable Pattern Detection', 'gform-spamfighter'),
-            array($this, 'render_checkbox_field'),
-            'gform-spamfighter',
-            'gform_spamfighter_pattern',
-            array(
-                'field_id'    => 'pattern_check_enabled',
-                'description' => __('Check for suspicious patterns, keywords, and links', 'gform-spamfighter'),
-            )
-        );
+            add_settings_field(
+                'pattern_check_enabled',
+                __('Enable Pattern Detection', 'gform-spamfighter'),
+                array($this, 'render_checkbox_field'),
+                'gform-spamfighter',
+                'gform_spamfighter_pattern',
+                array(
+                    'field_id'    => 'pattern_check_enabled',
+                    'description' => __('Check for suspicious patterns, keywords, and links', 'gform-spamfighter'),
+                )
+            );
 
-        add_settings_field(
-            'exclude_hidden_fields',
-            __('Exclude Hidden Fields', 'gform-spamfighter'),
-            array($this, 'render_checkbox_field'),
-            'gform-spamfighter',
-            'gform_spamfighter_pattern',
-            array(
-                'field_id'    => 'exclude_hidden_fields',
-                'description' => __('Exclude all hidden fields from spam analysis (recommended for campaign/tracking fields)', 'gform-spamfighter'),
-            )
-        );
+            add_settings_field(
+                'exclude_hidden_fields',
+                __('Exclude Hidden Fields', 'gform-spamfighter'),
+                array($this, 'render_checkbox_field'),
+                'gform-spamfighter',
+                'gform_spamfighter_pattern',
+                array(
+                    'field_id'    => 'exclude_hidden_fields',
+                    'description' => __('Exclude all hidden fields from spam analysis (recommended for campaign/tracking fields)', 'gform-spamfighter'),
+                )
+            );
+        }
 
-        // Behavior analysis section.
-        add_settings_section(
-            'gform_spamfighter_behavior',
-            __('Behavior Analysis', 'gform-spamfighter'),
-            array($this, 'render_behavior_section'),
-            'gform-spamfighter'
-        );
+        if (apply_filters('gform_spamfighter_show_behavior_settings', false)) {
+            add_settings_section(
+                'gform_spamfighter_behavior',
+                __('Behavior Analysis', 'gform-spamfighter'),
+                array($this, 'render_behavior_section'),
+                'gform-spamfighter'
+            );
 
-        add_settings_field(
-            'time_check_enabled',
-            __('Enable Time Check', 'gform-spamfighter'),
-            array($this, 'render_checkbox_field'),
-            'gform-spamfighter',
-            'gform_spamfighter_behavior',
-            array(
-                'field_id'    => 'time_check_enabled',
-                'description' => __('Block submissions that are too fast', 'gform-spamfighter'),
-            )
-        );
+            add_settings_field(
+                'time_check_enabled',
+                __('Enable Time Check', 'gform-spamfighter'),
+                array($this, 'render_checkbox_field'),
+                'gform-spamfighter',
+                'gform_spamfighter_behavior',
+                array(
+                    'field_id'    => 'time_check_enabled',
+                    'description' => __('Block submissions that are too fast', 'gform-spamfighter'),
+                )
+            );
 
-        add_settings_field(
-            'min_submission_time',
-            __('Minimum Submission Time', 'gform-spamfighter'),
-            array($this, 'render_number_field'),
-            'gform-spamfighter',
-            'gform_spamfighter_behavior',
-            array(
-                'field_id'    => 'min_submission_time',
-                'min'         => 1,
-                'max'         => 60,
-                'step'        => 1,
-                'description' => __('Minimum seconds before submission is allowed (default: 3)', 'gform-spamfighter'),
-            )
-        );
+            add_settings_field(
+                'min_submission_time',
+                __('Minimum Submission Time', 'gform-spamfighter'),
+                array($this, 'render_number_field'),
+                'gform-spamfighter',
+                'gform_spamfighter_behavior',
+                array(
+                    'field_id'    => 'min_submission_time',
+                    'min'         => 1,
+                    'max'         => 60,
+                    'step'        => 1,
+                    'description' => __('Minimum seconds before submission is allowed (default: 3)', 'gform-spamfighter'),
+                )
+            );
 
-        add_settings_field(
-            'language_check_enabled',
-            __('Enable Language Check', 'gform-spamfighter'),
-            array($this, 'render_checkbox_field'),
-            'gform-spamfighter',
-            'gform_spamfighter_behavior',
-            array(
-                'field_id'    => 'language_check_enabled',
-                'description' => __('Check if submission language matches site language', 'gform-spamfighter'),
-            )
-        );
+            add_settings_field(
+                'language_check_enabled',
+                __('Enable Language Check', 'gform-spamfighter'),
+                array($this, 'render_checkbox_field'),
+                'gform-spamfighter',
+                'gform_spamfighter_behavior',
+                array(
+                    'field_id'    => 'language_check_enabled',
+                    'description' => __('Check if submission language matches site language', 'gform-spamfighter'),
+                )
+            );
 
-        add_settings_field(
-            'duplicate_check_enabled',
-            __('Enable Duplicate Check', 'gform-spamfighter'),
-            array($this, 'render_checkbox_field'),
-            'gform-spamfighter',
-            'gform_spamfighter_behavior',
-            array(
-                'field_id'    => 'duplicate_check_enabled',
-                'description' => __('Block duplicate submissions from same IP', 'gform-spamfighter'),
-            )
-        );
+            add_settings_field(
+                'duplicate_check_enabled',
+                __('Enable Duplicate Check', 'gform-spamfighter'),
+                array($this, 'render_checkbox_field'),
+                'gform-spamfighter',
+                'gform_spamfighter_behavior',
+                array(
+                    'field_id'    => 'duplicate_check_enabled',
+                    'description' => __('Block duplicate submissions from same IP', 'gform-spamfighter'),
+                )
+            );
 
-        add_settings_field(
-            'duplicate_check_timeframe',
-            __('Duplicate Check Timeframe', 'gform-spamfighter'),
-            array($this, 'render_number_field'),
-            'gform-spamfighter',
-            'gform_spamfighter_behavior',
-            array(
-                'field_id'    => 'duplicate_check_timeframe',
-                'min'         => 1,
-                'max'         => 168,
-                'step'        => 1,
-                'description' => __('Hours to look back for duplicates (default: 24)', 'gform-spamfighter'),
-            )
-        );
+            add_settings_field(
+                'duplicate_check_timeframe',
+                __('Duplicate Check Timeframe', 'gform-spamfighter'),
+                array($this, 'render_number_field'),
+                'gform-spamfighter',
+                'gform_spamfighter_behavior',
+                array(
+                    'field_id'    => 'duplicate_check_timeframe',
+                    'min'         => 1,
+                    'max'         => 168,
+                    'step'        => 1,
+                    'description' => __('Hours to look back for duplicates (default: 24)', 'gform-spamfighter'),
+                )
+            );
+        }
 
         // Notifications section.
         add_settings_section(
