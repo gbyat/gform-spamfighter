@@ -61,8 +61,8 @@ class GravityForms
     {
         $this->settings = get_option('gform_spamfighter_settings', array());
 
-        // Add validation hook with higher priority to run after GF's built-in spam checks.
-        add_filter('gform_validation', array($this, 'validate_submission'), 20, 1);
+        // Add validation hook late so GF's own validation finishes first.
+        add_filter('gform_validation', array($this, 'validate_submission'), 999, 1);
 
         // Also hook into AJAX validation for AJAX-enabled forms.
         add_filter('gform_pre_submission', array($this, 'pre_submission_check'), 5, 1);
