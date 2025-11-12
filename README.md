@@ -9,46 +9,22 @@
 **License:** GPL v2 or later  
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
-Advanced multi-layer spam protection for Gravity Forms with optional AI detection, intelligent pattern analysis, and user-friendly soft warnings.
+AI-powered spam protection for Gravity Forms using OpenAI's advanced detection models.
 
 ## Description
 
-GForm Spamfighter is a comprehensive WordPress plugin designed to combat modern spam submissions in Gravity Forms, including AI-generated content and automated bot attacks. It employs multiple intelligent detection strategies with cost-optimized OpenAI integration to provide robust protection while maintaining an excellent user experience for legitimate submissions.
+GForm Spamfighter is a WordPress plugin designed to combat modern spam submissions in Gravity Forms, including AI-generated content and automated bot attacks. It uses OpenAI's sophisticated detection models to provide robust protection while maintaining an excellent user experience for legitimate submissions.
 
-### 🛡️ Core Features (No API Key Required)
+### 🛡️ Core Features
 
-**Works perfectly without any external services or costs:**
-
-- **Smart Pattern Detection**
-
-  - Suspicious keywords (viagra, casino, SEO spam, etc.)
-  - URLs with parameters (tracking/affiliate links)
-  - URL shorteners and suspicious TLDs
-  - Disposable email addresses (tempmail.com, etc.)
-  - Field-aware checks (links/emails/phones handled differently in text vs. message fields)
-  - Minimum word count in textareas
-
-- **Intelligent Behavior Analysis**
-
-  - Submission timing (detects bot speed)
-  - Known spam referrers (syndicatedsearch.goog, semalt.com, etc.)
-  - User agent analysis (bot detection)
-  - Language consistency (multisite-aware)
-  - Duplicate submission detection per submitter (email/IP scoped)
-
-- **Silent Soft Warnings**
-  - Low-risk signals are logged but do not interrupt the user
-  - Optional OpenAI check still receives the full context for a final verdict
-  - Admins can review soft warning details inside the spam logs
-
-### ⭐ Optional AI Enhancement
-
-- **OpenAI Integration** (optional, cost-optimized)
+- **OpenAI-Powered Detection**
   - 🆓 **Moderation API (FREE!)** - Content policy violations
   - 💰 **GPT Models** - Advanced spam/context detection (~$0.15/1000 checks)
-  - **Smart Optimization:** Only calls AI when pattern detection is uncertain (saves 70%+ costs)
   - Supports: gpt-4o-mini, gpt-4o, gpt-4-turbo, gpt-3.5-turbo
   - API key securely stored in wp-config.php or database
+  - Intelligent context analysis of entire form submissions
+  - Language detection and consistency checks
+  - Confidence scoring with configurable thresholds
 
 ### 📊 Admin Features
 
@@ -62,14 +38,13 @@ GForm Spamfighter is a comprehensive WordPress plugin designed to combat modern 
 - **Detailed Spam Logs**
 
   - Complete form data for review
-  - Detection details and scores
+  - OpenAI detection details and scores
   - "View Details" modal with all submission data
   - Automatic cleanup (configurable retention period)
   - Email notifications with full data
 
 - **Testing & Debugging**
   - Test OpenAI connection (AJAX-based)
-  - Clear all strikes button (admin testing)
   - Debug logging (when WP_DEBUG enabled)
 
 ### 🌍 Multisite Support
@@ -106,87 +81,52 @@ For detailed installation instructions, see [INSTALL.md](INSTALL.md)
 - WordPress 6.0 or higher
 - PHP 8.0 or higher
 - Gravity Forms plugin (latest version recommended)
-- OpenAI API key **OPTIONAL** (only for AI-powered spam detection)
+- OpenAI API key **REQUIRED** (for AI-powered spam detection)
 
-**Note:** The plugin works fully without OpenAI! Pattern detection, behavior analysis, and duplicate detection work independently and catch 95%+ of spam at zero cost.
+**Note:** The plugin requires an OpenAI API key to function. You can use the free Moderation API or any GPT model for advanced detection.
 
 ## Quick Start Configuration
 
-### Recommended Settings (No Cost, No API Key)
+### Recommended Settings
 
 ```
 ✅ Enable Spam Protection
-✅ Enable Pattern Detection
-✅ Enable Time Check (Min: 3 seconds)
-✅ Enable Language Check
-✅ Enable Duplicate Check (24 hours)
-   Block Action: Reject submission
-```
-
-This configuration blocks 95%+ of spam completely free!
-
-### Optional: Add OpenAI (For Sophisticated Spam)
-
-```
 ✅ Enable OpenAI Detection
    Model: 🆓 Moderation API (FREE) or GPT-4o Mini (~$0.15/1000)
    API Key: [Your OpenAI key]
    Threshold: 0.7
+   Block Action: Mark as spam (recommended) or Reject submission
 ```
 
-OpenAI is only called when pattern detection is uncertain (saves 70%+ API costs).
+This configuration uses OpenAI's advanced AI models to detect spam with high accuracy.
 
 ## How It Works
 
-### Intelligent Detection Flow
+### AI-Powered Detection Flow
 
-1. **Fast Free Checks** (< 100ms)
+1. **Form Submission Received**
 
-   - Pattern detection analyzes content (field-aware rules)
-   - Behavior analysis checks timing/referrer/user agent/language
-   - Duplicate check compares recent submissions per submitter
-   - Score calculated (0.0 - 1.0)
+   - Gravity Forms validates required fields and basic format
+   - Plugin intercepts submission before entry is saved
 
-2. **Smart AI Decision** (optional)
+2. **OpenAI Analysis**
 
-   - If score ≥ 0.7: **SPAM!** (OpenAI skipped, cost saved)
-   - If score < 0.7: **Call OpenAI** for a second opinion
+   - Complete form data is sent to OpenAI for analysis
+   - OpenAI evaluates content context, language, patterns, and intent
+   - Returns spam score (0.0 - 1.0) and reasoning
 
-3. **User-Friendly Handling**
+3. **Spam Decision**
 
-   - Low-level warnings are silent (submission continues)
-   - Severe pattern detections or OpenAI spam verdicts trigger a hard block
-   - Strike/lockout system only applies after hard spam decisions
+   - If score ≥ threshold: **SPAM!**
+   - Entry is marked as spam in Gravity Forms spam tab
+   - Notifications are disabled for spam entries
+   - User sees confirmation message (if block action is "mark")
 
-### Field-Type Specific Detection
+4. **Legitimate Submission**
 
-- **Single-line text fields**
-
-  - URLs, email addresses, and phone numbers trigger a soft warning (user not blocked)
-  - Excessive length, suspicious keywords, and number-sequence patterns
-  - Duplicate-check helper (per submitter, 24h scope by default)
-
-- **Message / textarea fields**
-
-  - Minimum word count (default 5 words) → hard block if not met
-  - Up to one link and one email/phone allowed; additional matches become soft warnings
-  - Business-terminology, repetition, excessive punctuation, suspicious number-sequence checks
-
-- **Email fields**
-
-  - Standard validation plus disposable-domain detection
-  - URLs mistakenly supplied in email fields trigger a hard block
-
-- **Website / URL fields**
-
-  - Rejects URLs containing parameters, raw IP hosts, suspicious TLDs, or known shorteners
-  - Email addresses placed in URL fields trigger a warning/block
-
-- **Global checks (all fields)**
-
-  - Behavior analysis: timing, language, referrer, user agent
-  - Strike/lockout management for repeated hard-spam attempts
-  - Optional OpenAI verdict treated as hard spam
+   - If score < threshold: **LEGITIMATE**
+   - Entry is saved normally
+   - All notifications and webhooks proceed as configured
 
 ## Configuration Options
 
@@ -195,33 +135,17 @@ OpenAI is only called when pattern detection is uncertain (saves 70%+ API costs)
 - Enable/disable spam protection globally
 - Choose block action: Reject or Mark as spam
 
-### Pattern Detection
-
-- Automatic checks for suspicious patterns
-- URLs with parameters not allowed
-- Minimum 5 words in textarea fields
-- Extensive spam keyword database
-
-### Behavior Analysis
-
-- Minimum submission time (anti-bot)
-- Language consistency checks
-- Known spam referrer database (syndicatedsearch.goog, semalt.com, etc.)
-- User agent analysis
-
 ### OpenAI Integration
 
 - Multiple model options (Moderation API free!)
-- Configurable spam threshold
-- Cost-optimized: Only used when needed
+- Configurable spam threshold (0.0 - 1.0)
 - API key via wp-config.php or settings
+- Rate limiting (60 API calls/hour per IP)
 
 ### Advanced
 
-- Duplicate check timeframe (hours)
 - Log retention period (7-365 days)
-- Email notifications (optional)
-- Strike lockout duration (filterable)
+- Email notifications for blocked spam (optional)
 
 ## Dashboard & Reporting
 
@@ -254,17 +178,15 @@ Perfect for international websites with multiple language versions:
 
 ## Performance
 
-- **Pattern Detection:** < 100ms
-- **Behavior Analysis:** < 50ms
-- **Duplicate Check:** < 20ms
-- **OpenAI (when called):** ~1-2 seconds
+- **OpenAI API Call:** ~1-2 seconds
 - **Total:** Minimal impact on user experience
+- **Rate Limiting:** 60 API calls/hour per IP to prevent abuse
 
 **Cost Optimization:**
 
-- 70% of spam caught by free checks (OpenAI skipped)
-- Only ~30% of submissions need AI analysis
-- With Moderation API: 100% free OpenAI usage!
+- Moderation API: 100% free OpenAI usage!
+- GPT-4o Mini: ~$0.15 per 1000 submissions
+- GPT-4o: ~$0.30 per 1000 submissions
 
 ## Privacy & Data Protection
 
@@ -277,25 +199,18 @@ Perfect for international websites with multiple language versions:
 
 ## Advanced Features
 
-### Soft Warning System
+### Spam Entry Handling
 
-- Low-risk findings (e.g., single link in text field) are logged silently
-- Submissions continue so the visitor never sees an interruption
-- Admins can review soft-warning details in the spam logs and adjust rules if needed
-
-### Strike System
-
-- Tracks spam attempts per IP/session
-- 15-minute lockout after soft warning ignored
-- Form fields disabled, submit button blocked
-- User must reload page to try again
-- Admin "Clear Strikes" button for testing
+- All spam entries are saved in Gravity Forms spam tab for review
+- Allows recovery of false positives
+- No data loss - all submissions are preserved
+- Notifications and webhooks are automatically disabled for spam
 
 ### Smart Detection
 
-- Fieldtype-aware checking (text vs email vs URL)
-- Combines multiple detection methods
-- Uses maximum score (if any method detects spam → spam)
+- Context-aware analysis of entire form submission
+- Language detection and consistency checks
+- Pattern recognition for promotional content, bot-generated text, and suspicious links
 - Configurable thresholds and sensitivity
 
 ## Filter Hooks
@@ -303,24 +218,17 @@ Perfect for international websites with multiple language versions:
 Extend and customize the plugin:
 
 ```php
-// Adjust minimum word count
-add_filter('gform_spamfighter_min_words', fn() => 7);
-
-// Adjust strike lockout duration
-add_filter('gform_spamfighter_strike_lockout_seconds', fn() => 5 * MINUTE_IN_SECONDS);
-
 // Adjust rate limiting
 add_filter('gform_spamfighter_rate_limit_max', fn() => 100);
 
-// Add custom spam referrers
-add_filter('gform_spamfighter_spam_referrers', function($referrers) {
-    $referrers['your-spam-domain.com'] = 'Description';
-    return $referrers;
-});
-
 // Customize validation messages
 add_filter('gform_spamfighter_validation_message', fn($msg) => 'Custom spam message');
-add_filter('gform_spamfighter_soft_warning_message', fn($msg) => 'Custom link warning');
+
+// Modify OpenAI request before sending
+add_filter('gform_spamfighter_openai_request', function($request, $form_data) {
+    // Modify $request array before API call
+    return $request;
+}, 10, 2);
 ```
 
 ## Troubleshooting
@@ -329,9 +237,10 @@ See detailed troubleshooting guide in [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 
 Common issues:
 
-- Legitimate submissions blocked → Lower threshold or disable specific checks
-- Spam still getting through → Enable more detection methods or add OpenAI
+- Legitimate submissions blocked → Lower threshold (try 0.8 or 0.9)
+- Spam still getting through → Lower threshold or switch to GPT-4o for better detection
 - OpenAI API errors → Check API key, credits, and server connectivity
+- Form submission hangs → Check server error logs for PHP warnings/errors
 
 ## Support & Documentation
 
@@ -346,6 +255,17 @@ For bug reports, feature requests, or support:
 - Website: https://webentwicklerin.at
 
 ## Changelog
+
+### 1.2.1 (2025-11-10)
+
+- **Major Refactor: OpenAI-Only Mode**
+  - Removed all pattern detection and behavior analysis checks
+  - Simplified to pure OpenAI-based spam detection
+  - Improved reliability and reduced complexity
+  - All spam entries saved in Gravity Forms spam tab
+  - Notifications automatically disabled for spam entries
+  - Removed debug logging from production code
+  - Hidden pattern/behavior settings from admin UI
 
 ### 1.0.0 (2025-10-16)
 
@@ -400,14 +320,14 @@ GNU General Public License for more details.
 
 - ❌ Honeypots alone can't stop AI-generated spam
 - ❌ Simple keyword filters miss sophisticated attacks
-- ❌ No protection against spam referrers
+- ❌ Pattern-based rules create false positives
 
 **GForm Spamfighter provides:**
 
-- ✅ Multi-layer defense (6+ detection methods)
-- ✅ AI-powered detection (optional, cost-optimized)
-- ✅ Field-type awareness (text/email/URL specific rules)
-- ✅ User-friendly (soft warnings, not instant blocks)
+- ✅ AI-powered detection using OpenAI's advanced models
+- ✅ Context-aware analysis of entire form submissions
+- ✅ High accuracy with minimal false positives
+- ✅ All spam entries saved for review (no data loss)
 - ✅ Admin insights (detailed logs, statistics)
 - ✅ Secure & compliant (GDPR, WordPress standards)
 - ✅ Multisite ready (perfect for international sites)
