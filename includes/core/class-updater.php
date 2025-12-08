@@ -228,9 +228,9 @@ class Updater
                 'installation' => $this->get_installation_instructions(),
             ),
             'download_link'     => $this->github_response->zipball_url,
-            'requires'          => '6.0',
-            'tested'            => '6.7',
-            'requires_php'      => '8.0',
+            'requires'          => $this->plugin['Requires at least'] ?? '6.0',
+            'tested'            => $this->plugin['Tested up to'] ?? '6.8.3',
+            'requires_php'      => $this->plugin['Requires PHP'] ?? '8.0',
         );
 
         return (object) $plugin_data;
