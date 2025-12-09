@@ -130,6 +130,15 @@ class Updater
             return $transient;
         }
 
+        // Ensure plugin data is available.
+        if (empty($this->plugin) || ! isset($this->plugin['Version'])) {
+            $this->set_plugin_properties();
+        }
+
+        if (! isset($this->plugin['Version'])) {
+            return $transient;
+        }
+
         // Get current version and new version.
         $current_version = $this->plugin['Version'];
         $new_version     = ltrim($this->github_response->tag_name, 'v');
