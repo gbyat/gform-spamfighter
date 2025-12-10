@@ -59,7 +59,7 @@ When a tag is pushed, GitHub Actions will:
 
 1. **Create ZIP**: Bundles plugin files into `gform-spamfighter.zip`
 
-   - Includes: `gform-spamfighter.php`, `includes/`, `assets/`, `uninstall.php`
+   - Includes: `gform-spamfighter.php`, `includes/`, `assets/`, `languages/`, `uninstall.php`
    - Includes: `README.md`, `CHANGELOG.md`, documentation files
    - Excludes: Development files (scripts, .github, node_modules, etc.)
 

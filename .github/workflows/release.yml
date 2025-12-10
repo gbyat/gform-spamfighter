@@ -46,6 +46,14 @@ jobs:
             echo "⚠️  Assets directory not found (optional)"
           fi
 
+          # Copy languages directory (translation files)
+          if [ -d "languages" ]; then
+            cp -r languages gform-spamfighter/
+            echo "✅ Copied languages/ (translation files)"
+          else
+            echo "⚠️  Languages directory not found (optional)"
+          fi
+
           # Copy uninstall script
           if [ -f "uninstall.php" ]; then
             cp uninstall.php gform-spamfighter/
@@ -75,6 +83,8 @@ jobs:
           ls -la gform-spamfighter/includes/ || echo "Includes not found"
           echo "=== Assets directory ==="
           ls -la gform-spamfighter/assets/ || echo "Assets not found"
+          echo "=== Languages directory ==="
+          ls -la gform-spamfighter/languages/ || echo "Languages not found"
 
           # Create ZIP file - always named gform-spamfighter.zip
           zip -r gform-spamfighter.zip gform-spamfighter/

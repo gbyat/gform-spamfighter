@@ -11,6 +11,7 @@ wp-content/cache/supercache/
 # Plugin specific
 node_modules/
 vendor/
+package-lock.json
 *.log
 .DS_Store
 Thumbs.db
