@@ -6,6 +6,7 @@
   "scripts": {
     "status": "node scripts/status.js",
     "pot": "node scripts/generate-pot.js",
+    "sync-version": "node scripts/sync-version.js",
     "release:patch": "node scripts/release.js patch",
     "release:minor": "node scripts/release.js minor",
     "release:major": "node scripts/release.js major"
