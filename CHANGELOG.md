@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.6] - 2025-12-10
+
+- Update release process to include languages directory and modify .gitignore to exclude package-lock.json
+
+
 ## [1.2.5] - 2025-12-10
 
 - Update tested compatibility to WordPress 6.9 in README and readme.txt files
@@ -236,3 +241,4 @@ HEAD~10)..HEAD --oneline --pretty=format:"- %s"
 [1.0.0]: https://github.com/gbyat/gform-spamfighter/releases/tag/v1.0.0
 [1.2.4]: https://github.com/gbyat/gform-spamfighter/releases/tag/v1.2.4
 [1.2.5]: https://github.com/gbyat/gform-spamfighter/releases/tag/v1.2.5
+[1.2.6]: https://github.com/gbyat/gform-spamfighter/releases/tag/v1.2.6
