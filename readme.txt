@@ -1,12 +1,10 @@
-*** Begin Patch
-*** Add File: readme.txt
 === GForm Spamfighter ===
 Contributors: gbyat, webentwicklerin
 Author URI: https://webentwicklerin.at
 Plugin URI: https://github.com/gbyat/gform-spamfighter
 Tags: spam, gravity forms, anti-spam, openai, ai detection, form protection, spam filter
 Requires at least: 6.0
-Tested up to: 6.8
+Tested up to: 6.9
 Stable tag: 1.1.0
 Requires PHP: 8.0
 License: GPL v2 or later

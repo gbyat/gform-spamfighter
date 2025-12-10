@@ -238,7 +238,7 @@ class Updater
             ),
             'download_link'     => $this->github_response->zipball_url,
             'requires'          => $this->plugin['Requires at least'] ?? '6.0',
-            'tested'            => $this->plugin['Tested up to'] ?? '6.8.3',
+            'tested'            => $this->plugin['Tested up to'] ?? '6.9',
             'requires_php'      => $this->plugin['Requires PHP'] ?? '8.0',
         );
 

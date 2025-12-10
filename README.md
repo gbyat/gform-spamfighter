@@ -3,7 +3,7 @@
 **Contributors:** gbyat, webentwicklerin  
 **Tags:** spam, gravity forms, anti-spam, openai, ai detection, form protection, spam filter  
 **Requires at least:** 6.0  
-**Tested up to:** 6.8  
+**Tested up to:** 6.9
 **Stable tag:** 1.2.4  
 **Requires PHP:** 8.0  
 **License:** GPL v2 or later  
