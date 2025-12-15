@@ -22,13 +22,6 @@ class Database
     private static $instance = null;
 
     /**
-     * Table name for spam logs.
-     *
-     * @var string
-     */
-    private $table_name;
-
-    /**
      * Get instance.
      *
      * @return Database
@@ -46,44 +39,30 @@ class Database
      */
     private function __construct()
     {
+        // Table name is generated dynamically to support Multisite.
+    }
+
+    /**
+     * Get table name (dynamic for Multisite compatibility).
+     *
+     * @return string Table name with current site's prefix.
+     */
+    private function get_table_name()
+    {
         global $wpdb;
-        $this->table_name = $wpdb->prefix . 'gform_spam_logs';
+        return $wpdb->prefix . 'gform_spam_logs';
     }
 
     /**
      * Create database tables.
-     *
-     * Uses a transient cache to avoid checking on every request.
-     * The check runs once per day or when the transient expires.
      */
     public function create_tables()
     {
         global $wpdb;
 
-        // Use transient to cache table existence check (24 hours)
-        // This prevents checking on every request for better performance
-        $transient_key = 'gform_spamfighter_tables_created_' . get_current_blog_id();
-        $tables_exist = get_transient($transient_key);
-
-        if (false !== $tables_exist) {
-            // Tables were recently checked and exist, skip the check
-            return;
-        }
-
-        // Check if table actually exists before running dbDelta
-        $table_exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $this->table_name)) === $this->table_name;
-
-        if ($table_exists) {
-            // Table exists, set transient for 24 hours
-            $hour_in_seconds = \defined('HOUR_IN_SECONDS') ? \constant('HOUR_IN_SECONDS') : 3600;
-            set_transient($transient_key, true, 24 * $hour_in_seconds);
-            return;
-        }
-
-        // Table doesn't exist, create it
         $charset_collate = $wpdb->get_charset_collate();
 
-        $sql = "CREATE TABLE IF NOT EXISTS {$this->table_name} (
+        $sql = "CREATE TABLE IF NOT EXISTS {$this->get_table_name()} (
 			id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 			form_id bigint(20) UNSIGNED NOT NULL,
 			entry_data longtext NOT NULL,
@@ -103,12 +82,9 @@ class Database
 			KEY site_id (site_id)
 		) $charset_collate;";
 
-        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- WordPress core constant in global namespace.
+        require_once \ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
-
-        // Set transient after creation (24 hours)
-        $hour_in_seconds = \defined('HOUR_IN_SECONDS') ? \constant('HOUR_IN_SECONDS') : 3600;
-        set_transient($transient_key, true, 24 * $hour_in_seconds);
     }
 
     /**
@@ -151,7 +127,7 @@ class Database
 
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Custom table insert for spam log.
         $result = $wpdb->insert(
-            $this->table_name,
+            $this->get_table_name(),
             $data,
             array(
                 '%d', // form_id.
@@ -166,6 +142,37 @@ class Database
                 '%s', // action_taken.
             )
         );
+
+        // If insert failed due to missing table/columns, try to repair and retry once.
+        if (! $result && ! empty($wpdb->last_error)) {
+            // Check if error is related to missing table or column.
+            $error_lower = strtolower($wpdb->last_error);
+            if (
+                stripos($error_lower, "doesn't exist") !== false ||
+                stripos($error_lower, 'unknown column') !== false ||
+                stripos($error_lower, 'table') !== false
+            ) {
+                // Attempt to repair table structure.
+                $this->verify_and_repair_table();
+                // Retry insert once.
+                $result = $wpdb->insert(
+                    $this->get_table_name(),
+                    $data,
+                    array(
+                        '%d',
+                        '%s',
+                        '%f',
+                        '%s',
+                        '%s',
+                        '%s',
+                        '%s',
+                        '%d',
+                        '%s',
+                        '%s',
+                    )
+                );
+            }
+        }
 
         return $result ? $wpdb->insert_id : false;
     }
@@ -236,13 +243,33 @@ class Database
 
         // Safe to use $args['order_by'] and $args['order'] now as they're whitelisted.
         $query = $wpdb->prepare(
-            "SELECT * FROM {$this->table_name} WHERE {$where_clause} ORDER BY {$args['order_by']} {$args['order']} LIMIT %d OFFSET %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            "SELECT * FROM {$this->get_table_name()} WHERE {$where_clause} ORDER BY {$args['order_by']} {$args['order']} LIMIT %d OFFSET %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $args['limit'],
             $args['offset']
         );
 
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Custom table query with dynamic filters, no caching applicable.
-        $results = $wpdb->get_results($query, ARRAY_A);
+        $results = $wpdb->get_results($query, \ARRAY_A);
+
+        // If query failed due to missing table/columns, try to repair and retry once.
+        if (false === $results && ! empty($wpdb->last_error)) {
+            $error_lower = strtolower($wpdb->last_error);
+            if (
+                stripos($error_lower, "doesn't exist") !== false ||
+                stripos($error_lower, 'unknown column') !== false ||
+                stripos($error_lower, 'table') !== false
+            ) {
+                // Attempt to repair table structure.
+                $this->verify_and_repair_table();
+                // Retry query once.
+                $results = $wpdb->get_results($query, \ARRAY_A); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.PreparedSQL.NotPrepared
+            }
+        }
+
+        // If still false (error), return empty array instead of false to prevent errors in calling code.
+        if (false === $results) {
+            $results = array();
+        }
 
         return $results;
     }
@@ -271,7 +298,7 @@ class Database
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Statistics query for custom table, caching handled at application level.
         $stats['total_blocked'] = $wpdb->get_var(
             $wpdb->prepare(
-                "SELECT COUNT(*) FROM {$this->table_name} WHERE created_at >= %s",
+                "SELECT COUNT(*) FROM {$this->get_table_name()} WHERE created_at >= %s",
                 $date_from
             )
         );
@@ -281,13 +308,13 @@ class Database
         $stats['by_method'] = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT detection_method, COUNT(*) as count 
-				 FROM {$this->table_name} 
+				 FROM {$this->get_table_name()} 
 				 WHERE created_at >= %s 
 				 GROUP BY detection_method 
 				 ORDER BY count DESC",
                 $date_from
             ),
-            ARRAY_A
+            \ARRAY_A
         );
 
         // By form.
@@ -295,14 +322,14 @@ class Database
         $stats['by_form'] = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT form_id, COUNT(*) as count 
-				 FROM {$this->table_name} 
+				 FROM {$this->get_table_name()} 
 				 WHERE created_at >= %s 
 				 GROUP BY form_id 
 				 ORDER BY count DESC 
 				 LIMIT 10",
                 $date_from
             ),
-            ARRAY_A
+            \ARRAY_A
         );
 
         // By site (multisite).
@@ -311,13 +338,13 @@ class Database
             $stats['by_site'] = $wpdb->get_results(
                 $wpdb->prepare(
                     "SELECT site_id, COUNT(*) as count 
-					 FROM {$this->table_name} 
+					 FROM {$this->get_table_name()} 
 					 WHERE created_at >= %s 
 					 GROUP BY site_id 
 					 ORDER BY count DESC",
                     $date_from
                 ),
-                ARRAY_A
+                \ARRAY_A
             );
         }
 
@@ -326,13 +353,13 @@ class Database
         $stats['daily_trend'] = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT DATE(created_at) as date, COUNT(*) as count 
-				 FROM {$this->table_name} 
+				 FROM {$this->get_table_name()} 
 				 WHERE created_at >= %s 
 				 GROUP BY DATE(created_at) 
 				 ORDER BY date ASC",
                 $date_from
             ),
-            ARRAY_A
+            \ARRAY_A
         );
 
         return $stats;
@@ -359,7 +386,7 @@ class Database
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cleanup operation on custom table.
         return $wpdb->query(
             $wpdb->prepare(
-                "DELETE FROM {$this->table_name} WHERE created_at < %s",
+                "DELETE FROM {$this->get_table_name()} WHERE created_at < %s",
                 $date
             )
         );
@@ -383,7 +410,7 @@ class Database
 
         // Get recent submissions.
         $query = $wpdb->prepare(
-            "SELECT entry_data FROM {$this->table_name} 
+            "SELECT entry_data FROM {$this->get_table_name()} 
 			 WHERE form_id = %d 
 			 AND user_ip = %s 
 			 AND created_at >= %s",
@@ -409,6 +436,75 @@ class Database
         }
 
         return false;
+    }
+
+    /**
+     * Check if table exists.
+     *
+     * @return bool True if table exists, false otherwise.
+     */
+    private function table_exists()
+    {
+        global $wpdb;
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Table existence check.
+        $table_exists = $wpdb->get_var(
+            $wpdb->prepare(
+                'SHOW TABLES LIKE %s',
+                $this->get_table_name()
+            )
+        );
+
+        return (bool) $table_exists;
+    }
+
+    /**
+     * Verify table structure and repair if needed.
+     *
+     * Checks if table exists and all required columns are present.
+     * Automatically repairs by recreating table structure using dbDelta.
+     *
+     * @return bool True if table is valid or was successfully repaired, false on failure.
+     */
+    public function verify_and_repair_table()
+    {
+        // Check if table exists.
+        if (! $this->table_exists()) {
+            // Table doesn't exist - recreate it.
+            $this->create_tables();
+            return $this->table_exists();
+        }
+
+        // Table exists - verify structure using dbDelta (which adds missing columns).
+        global $wpdb;
+
+        $charset_collate = $wpdb->get_charset_collate();
+
+        $sql = "CREATE TABLE {$this->get_table_name()} (
+			id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+			form_id bigint(20) UNSIGNED NOT NULL,
+			entry_data longtext NOT NULL,
+			spam_score float NOT NULL DEFAULT 0,
+			detection_method varchar(255) NOT NULL,
+			detection_details longtext,
+            user_ip varchar(100),
+            user_agent text,
+            site_id bigint(20) UNSIGNED,
+            site_locale varchar(20),
+            action_taken varchar(50) NOT NULL DEFAULT 'rejected',
+			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY  (id),
+			KEY form_id (form_id),
+			KEY created_at (created_at),
+			KEY spam_score (spam_score),
+			KEY site_id (site_id)
+		) $charset_collate;";
+
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- WordPress core constant in global namespace.
+        require_once \ABSPATH . 'wp-admin/includes/upgrade.php';
+        dbDelta($sql); // dbDelta compares and adds missing columns without losing data.
+
+        return true;
     }
 
     /**

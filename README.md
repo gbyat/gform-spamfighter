@@ -4,7 +4,7 @@
 **Tags:** spam, gravity forms, anti-spam, openai, ai detection, form protection, spam filter  
 **Requires at least:** 6.0  
 **Tested up to:** 6.9
-**Stable tag:** 1.2.7  
+**Stable tag:** 1.2.8  
 **Requires PHP:** 8.0  
 **License:** GPL v2 or later  
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
@@ -175,12 +175,22 @@ Perfect for international websites with multiple language versions:
 - Automatic language detection per locale
 - Statistics filterable by site
 - Works seamlessly across 8+ language subsites
+- **Automatic database table management**
+  - Each subsite gets its own database table (e.g., `wp_2_gform_spam_logs`, `wp_3_gform_spam_logs`)
+  - Tables are automatically created when needed
+  - Automatic repair if tables are missing or corrupted
+  - Fully compatible with `switch_to_blog()` operations
+  - No manual database maintenance required
 
 ## Performance
 
 - **OpenAI API Call:** ~1-2 seconds
 - **Total:** Minimal impact on user experience
 - **Rate Limiting:** 60 API calls/hour per IP to prevent abuse
+- **Database:** Automatic table maintenance with zero performance impact
+  - Tables are checked and repaired only when errors occur
+  - No proactive checks on every request
+  - Self-healing: automatically recovers from database issues
 
 **Cost Optimization:**
 
