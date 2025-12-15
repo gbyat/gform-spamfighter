@@ -52,11 +52,35 @@ class Database
 
     /**
      * Create database tables.
+     *
+     * Uses a transient cache to avoid checking on every request.
+     * The check runs once per day or when the transient expires.
      */
     public function create_tables()
     {
         global $wpdb;
 
+        // Use transient to cache table existence check (24 hours)
+        // This prevents checking on every request for better performance
+        $transient_key = 'gform_spamfighter_tables_created_' . get_current_blog_id();
+        $tables_exist = get_transient($transient_key);
+
+        if (false !== $tables_exist) {
+            // Tables were recently checked and exist, skip the check
+            return;
+        }
+
+        // Check if table actually exists before running dbDelta
+        $table_exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $this->table_name)) === $this->table_name;
+
+        if ($table_exists) {
+            // Table exists, set transient for 24 hours
+            $hour_in_seconds = \defined('HOUR_IN_SECONDS') ? \constant('HOUR_IN_SECONDS') : 3600;
+            set_transient($transient_key, true, 24 * $hour_in_seconds);
+            return;
+        }
+
+        // Table doesn't exist, create it
         $charset_collate = $wpdb->get_charset_collate();
 
         $sql = "CREATE TABLE IF NOT EXISTS {$this->table_name} (
@@ -81,6 +105,10 @@ class Database
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
+
+        // Set transient after creation (24 hours)
+        $hour_in_seconds = \defined('HOUR_IN_SECONDS') ? \constant('HOUR_IN_SECONDS') : 3600;
+        set_transient($transient_key, true, 24 * $hour_in_seconds);
     }
 
     /**

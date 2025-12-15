@@ -94,14 +94,39 @@ class GravityForms
             return;
         }
 
-        if (isset($this->flagged_forms[$form_id]) && class_exists('\GFFormsModel')) {
-            \call_user_func(array('\GFFormsModel', 'update_lead_property'), $entry['id'], 'is_spam', 1);
-            \call_user_func(array('\GFFormsModel', 'update_lead_property'), $entry['id'], 'status', 'spam');
+        if (! isset($this->flagged_forms[$form_id])) {
+            return;
+        }
 
-            $this->flagged_entries[$entry_id] = true;
+        // Preferred: use GFAPI helper, which handles schema details internally.
+        if (class_exists('\GFAPI')) {
+            $result = \call_user_func(array('\GFAPI', 'mark_entry_spam'), $entry_id);
 
-            if ('mark' === $this->get_block_action()) {
-                unset($this->flagged_forms[$form_id]);
+            if (! is_wp_error($result)) {
+                $this->flagged_entries[$entry_id] = true;
+
+                if ('mark' === $this->get_block_action()) {
+                    unset($this->flagged_forms[$form_id]);
+                }
+
+                return;
+            }
+        }
+
+        // Fallback: update status only (some installations may not have an `is_spam` column).
+        if (class_exists('\GFFormsModel')) {
+            try {
+                \call_user_func(array('\GFFormsModel', 'update_lead_property'), $entry_id, 'status', 'spam');
+
+                $this->flagged_entries[$entry_id] = true;
+
+                if ('mark' === $this->get_block_action()) {
+                    unset($this->flagged_forms[$form_id]);
+                }
+            } catch (\Exception $e) {
+                if (\defined('WP_DEBUG') && \constant('WP_DEBUG')) {
+                    error_log('GFORM Spamfighter: Failed to mark entry as spam: ' . $e->getMessage());
+                }
             }
         }
     }
@@ -228,7 +253,9 @@ class GravityForms
             }
 
             if (empty($value) && class_exists('\GFFormsModel')) {
-                $value = \call_user_func(array('\GFFormsModel', 'get_field_value'), $field);
+                // GFFormsModel::get_field_value() expects the field to be passed by reference.
+                $field_ref = &$field;
+                $value     = \call_user_func(array('\GFFormsModel', 'get_field_value'), $field_ref);
             }
 
             if (empty($value) && isset($field->inputs) && is_array($field->inputs)) {
