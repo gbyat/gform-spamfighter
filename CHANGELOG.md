@@ -7,73 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.8] - 2025-12-15
 
-- Version update
+### Fixed
 
+- Fixed PHP warning: `GFFormsModel::get_field_value()` now correctly passes field by reference
+- Fixed database error: `Unknown column 'is_spam'` - now uses `GFAPI::mark_entry_spam()` when available, with fallback to status-only update
+- Fixed missing database tables after plugin updates - tables are now automatically created/verified on plugin initialization
+- Fixed database table errors in Multisite environments - tables are automatically repaired when errors occur
+
+### Changed
+
+- Improved database table management for Multisite compatibility
+  - Dynamic table name generation using `get_table_name()` method instead of static property
+  - Fully compatible with `switch_to_blog()` operations
+  - Each subsite automatically gets its own database table (e.g., `wp_2_gform_spam_logs`, `wp_3_gform_spam_logs`)
+- Enhanced automatic table maintenance
+  - Tables are automatically repaired when database errors occur (missing table, unknown column, etc.)
+  - No proactive checks on every request - only repairs when needed
+  - Self-healing: automatically recovers from database issues without manual intervention
+
+### Added
+
+- `verify_and_repair_table()` method for automatic database table structure verification and repair
+- `table_exists()` helper method for checking table existence
+- Automatic error detection and recovery in `log_spam()` and `get_spam_logs()` methods
+- Improved error handling in `handle_after_submission()` with try/catch blocks
 
 ## [1.2.7] - 2025-12-15
 
 - Version update
 
-
 ## [1.2.6] - 2025-12-10
 
 - Update release process to include languages directory and modify .gitignore to exclude package-lock.json
-
 
 ## [1.2.5] - 2025-12-10
 
 - Update tested compatibility to WordPress 6.9 in README and readme.txt files
 
-
 ## [1.2.4] - 2025-12-10
 
 - Add sync-version script and enhance release process with branch detection and remote repository check
-
 
 ## [1.2.3] - 2025-12-09
 
 - Ensure plugin data is available before processing version updates in the Updater class
 
-
 ## [1.2.2] - 2025-12-08
 
 - Refactor README.md to emphasize AI-powered spam detection and simplify feature descriptions
-
 
 ## [1.2.1] - 2025-11-10
 
 - Version update
 
-
 ## [1.2.0] - 2025-11-10
 
 - Version update
-
 
 ## [1.1.5] - 2025-11-10
 
 - Version update
 
-
 ## [1.1.4] - 2025-11-10
 
 - Version update
-
 
 ## [1.1.3] - 2025-11-08
 
 - Version update
 
-
 ## [1.1.2] - 2025-11-08
 
 - Version update
 
-
 ## [1.1.1] - 2025-11-08
 
 - Version update
-
 
 ## [1.1.0] - 2025-11-07
 
@@ -97,33 +106,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Version update
 
-
 ## [1.0.14] - 2025-10-30
 
 - Version update
-
 
 ## [1.0.13] - 2025-10-30
 
 - Version update
 
-
 ## [1.0.12] - 2025-10-30
 
 - Version update
 
-
 ## [1.0.11] - 2025-10-28
 
 - Version update
-
 
 ## [1.0.10] - 2025-10-28
 
 - Update CHANGELOG to remove added features from v1.0.9
 - Revert "Implement database migration support and update logging structure"
 - Revert "Release v1.0.10"
-
 
 ## [1.0.9] - 2025-10-23
 
