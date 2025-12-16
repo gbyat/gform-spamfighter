@@ -174,7 +174,14 @@ class Database
             }
         }
 
-        return $result ? $wpdb->insert_id : false;
+        if (! $result) {
+            return false;
+        }
+
+        // Increment lifetime total counter (does not decrease when logs are deleted).
+        $this->increment_total_blocked();
+
+        return $wpdb->insert_id;
     }
 
     /**
@@ -272,6 +279,65 @@ class Database
         }
 
         return $results;
+    }
+
+    /**
+     * Get total count of spam logs.
+     *
+     * @return int
+     */
+    public function get_spam_logs_count()
+    {
+        global $wpdb;
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Count query for custom table.
+        $count = (int) $wpdb->get_var(
+            "SELECT COUNT(*) FROM {$this->get_table_name()}"
+        );
+
+        return $count;
+    }
+
+    /**
+     * Get lifetime total of blocked spam submissions.
+     *
+     * This value is stored in an option and does not decrease when logs are deleted.
+     * On first access it is initialized from the current number of log rows.
+     *
+     * @return int
+     */
+    public function get_total_blocked()
+    {
+        $option_key = 'gform_spamfighter_total_blocked';
+
+        // Use null as sentinel to detect "not initialized yet".
+        $stored = get_option($option_key, null);
+
+        if (null === $stored) {
+            // Initialize from existing logs so we keep historical data
+            // even if logs have already been collected before this feature existed.
+            $initial = $this->get_spam_logs_count();
+            update_option($option_key, (int) $initial);
+            return (int) $initial;
+        }
+
+        return (int) $stored;
+    }
+
+    /**
+     * Increment lifetime total of blocked spam submissions.
+     *
+     * @param int $amount Amount to add.
+     * @return void
+     */
+    private function increment_total_blocked($amount = 1)
+    {
+        $option_key = 'gform_spamfighter_total_blocked';
+
+        $current = (int) get_option($option_key, 0);
+        $new     = $current + (int) $amount;
+
+        update_option($option_key, $new);
     }
 
     /**
@@ -390,6 +456,67 @@ class Database
                 $date
             )
         );
+    }
+
+    /**
+     * Delete a single spam log entry.
+     *
+     * @param int $id Log ID.
+     * @return bool
+     */
+    public function delete_log($id)
+    {
+        global $wpdb;
+
+        $id = absint($id);
+        if (! $id) {
+            return false;
+        }
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Delete operation on custom table.
+        $deleted = (bool) $wpdb->delete(
+            $this->get_table_name(),
+            array('id' => $id),
+            array('%d')
+        );
+
+        return $deleted;
+    }
+
+    /**
+     * Bulk delete spam log entries.
+     *
+     * @param array $ids Array of log IDs.
+     * @return int Number of deleted rows.
+     */
+    public function bulk_delete_logs($ids)
+    {
+        global $wpdb;
+
+        if (empty($ids) || ! is_array($ids)) {
+            return 0;
+        }
+
+        // Sanitize IDs.
+        $ids = array_map('absint', $ids);
+        $ids = array_filter($ids);
+
+        if (empty($ids)) {
+            return 0;
+        }
+
+        // Build placeholders for IN clause.
+        $placeholders = implode(',', array_fill(0, count($ids), '%d'));
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Bulk delete operation on custom table.
+        $result = $wpdb->query(
+            $wpdb->prepare(
+                "DELETE FROM {$this->get_table_name()} WHERE id IN ({$placeholders})", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Placeholders are prepared.
+                ...$ids
+            )
+        );
+
+        return (int) $result;
     }
 
     /**

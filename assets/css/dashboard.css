@@ -10,7 +10,7 @@
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
 	gap: 20px;
-	margin: 30px 0;
+	margin: 40px 0 50px;
 }
 
 .gform-stat-box {
@@ -23,24 +23,29 @@
 }
 
 .gform-stat-value {
-	font-size: 48px;
+	font-size: 36px;
 	font-weight: bold;
 	color: #2271b1;
-	margin-bottom: 10px;
+	margin-bottom: 4px;
 }
 
 .gform-stat-label {
-	font-size: 14px;
+	font-size: 13px;
 	color: #666;
 	text-transform: uppercase;
-	letter-spacing: 0.5px;
+	letter-spacing: 0.3px;
+}
+
+/* Extra spacing between value and label in main dashboard stats (top row) */
+.gform-spamfighter-dashboard > .gform-stats-grid .gform-stat-value {
+	margin-bottom: 10px;
 }
 
 .gform-charts-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
 	gap: 30px;
-	margin: 30px 0;
+	margin: 40px 0;
 }
 
 .gform-chart-container {
@@ -145,6 +150,65 @@
 
 .gform-view-details {
 	cursor: pointer;
+}
+
+/* Custom pagination styling for Spamfighter logs */
+.gform-spamfighter-pagination .tablenav-pages {
+	float: none; /* Override WordPress default float:right */
+}
+
+.gform-spamfighter-pagination .page-numbers {
+	display: inline-block;
+	min-width: 28px;
+	padding: 4px 8px;
+	margin: 0 2px;
+	border: 1px solid #2271b1;
+	border-radius: 3px;
+	text-decoration: none;
+	color: #2271b1;
+	background: #fff;
+}
+
+.gform-spamfighter-pagination .page-numbers.current {
+	background: #2271b1;
+	color: #fff;
+	font-weight: 600;
+}
+
+.gform-spamfighter-pagination .page-numbers.dots {
+	border-color: transparent;
+	background: transparent;
+}
+
+/* OpenAI rate limit cards – smaller typography and no overlaps */
+.gform-table-container .gform-stats-grid {
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 15px;
+}
+
+.gform-table-container .gform-stat-box {
+	padding: 18px;
+	border-left-width: 3px;
+}
+
+.gform-table-container .gform-stat-value {
+	font-size: 28px;
+	line-height: 1.2;
+	white-space: nowrap;
+}
+
+.gform-table-container .gform-stat-label {
+	font-size: 12px;
+}
+
+@media screen and (max-width: 782px) {
+	.gform-table-container .gform-stat-value {
+		font-size: 22px;
+	}
+
+	.gform-table-container .gform-stats-grid {
+		grid-template-columns: 1fr;
+	}
 }
 
 @media screen and (max-width: 768px) {

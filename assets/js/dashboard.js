@@ -23,39 +23,10 @@
             }, 100);
         });
 
-        // Clear strikes button
-        $('#gform-clear-strikes').on('click', function () {
-            if (!confirm('Clear all spam warning strikes? This will unlock all temporarily locked forms.')) {
-                return;
-            }
-
-            const $button = $(this);
-            const $result = $('#gform-clear-strikes-result');
-
-            $button.prop('disabled', true).text('Clearing...');
-
-            $.ajax({
-                url: gformSpamfighter.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'gform_spamfighter_clear_strikes',
-                    nonce: gformSpamfighter.nonce
-                },
-                success: function (response) {
-                    if (response.success) {
-                        $result.html('<span style="color:green;">✓ ' + response.data.message + '</span>');
-                        setTimeout(function () { $result.html(''); }, 3000);
-                    } else {
-                        $result.html('<span style="color:red;">✗ ' + response.data.message + '</span>');
-                    }
-                },
-                error: function () {
-                    $result.html('<span style="color:red;">✗ Error clearing strikes</span>');
-                },
-                complete: function () {
-                    $button.prop('disabled', false).text('🔓 Clear All Strikes (Testing)');
-                }
-            });
+        // Select all checkboxes on logs table
+        $('#gform-spamfighter-select-all').on('click', function () {
+            const checked = $(this).prop('checked');
+            $('input[name="log_ids[]"]').prop('checked', checked);
         });
     });
 

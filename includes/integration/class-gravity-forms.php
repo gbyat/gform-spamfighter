@@ -98,22 +98,11 @@ class GravityForms
             return;
         }
 
-        // Preferred: use GFAPI helper, which handles schema details internally.
-        if (class_exists('\GFAPI')) {
-            $result = \call_user_func(array('\GFAPI', 'mark_entry_spam'), $entry_id);
-
-            if (! is_wp_error($result)) {
-                $this->flagged_entries[$entry_id] = true;
-
-                if ('mark' === $this->get_block_action()) {
-                    unset($this->flagged_forms[$form_id]);
-                }
-
-                return;
-            }
-        }
-
-        // Fallback: update status only (some installations may not have an `is_spam` column).
+        // Mark entry as spam by setting the status field.
+        // We intentionally avoid using GFAPI::mark_entry_spam(), because it can behave
+        // differently across versions and is not available everywhere. Updating the
+        // status to "spam" is sufficient for Gravity Forms to move the entry into
+        // the Spam tab.
         if (class_exists('\GFFormsModel')) {
             try {
                 \call_user_func(array('\GFFormsModel', 'update_lead_property'), $entry_id, 'status', 'spam');
