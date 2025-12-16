@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.9] - 2025-12-16
+
+- Refactor dashboard styles and functionality: update CSS for improved layout and typography, remove unused clear strikes button, implement bulk delete and pagination for spam logs, and enhance database methods for log management.
+- Update CHANGELOG for version 1.2.8: Fix PHP warnings, database errors, and enhance Multisite compatibility; add new methods for table verification and error handling.
+
+
 ## [1.2.8] - 2025-12-15
 
 ### Fixed
@@ -257,3 +263,4 @@ HEAD~10)..HEAD --oneline --pretty=format:"- %s"
 [1.2.6]: https://github.com/gbyat/gform-spamfighter/releases/tag/v1.2.6
 [1.2.7]: https://github.com/gbyat/gform-spamfighter/releases/tag/v1.2.7
 [1.2.8]: https://github.com/gbyat/gform-spamfighter/releases/tag/v1.2.8
+[1.2.9]: https://github.com/gbyat/gform-spamfighter/releases/tag/v1.2.9
