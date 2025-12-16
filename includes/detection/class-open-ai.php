@@ -275,8 +275,6 @@ is_spam should be true if spam_score >= 0.7',
      */
     private function call_api($prompt)
     {
-        error_log('GFORM OpenAI: call_api started with model: ' . $this->model);
-
         $body = array(
             'model'       => $this->model,
             'messages'    => array(
@@ -293,8 +291,6 @@ is_spam should be true if spam_score >= 0.7',
             'max_tokens'  => 500,
         );
 
-        error_log('GFORM OpenAI: Sending request to OpenAI...');
-
         $response = wp_remote_post(
             $this->api_endpoint,
             array(
@@ -309,11 +305,8 @@ is_spam should be true if spam_score >= 0.7',
             )
         );
 
-        error_log('GFORM OpenAI: Got response');
-
         if (is_wp_error($response)) {
             $error_message = $response->get_error_message();
-            error_log('GFORM OpenAI: WP_Error - ' . $error_message);
             Logger::get_instance()->error(
                 'OpenAI API request failed',
                 array(
@@ -322,8 +315,6 @@ is_spam should be true if spam_score >= 0.7',
             );
             return $response;
         }
-
-        error_log('GFORM OpenAI: Response is not WP_Error');
 
         $response_code = wp_remote_retrieve_response_code($response);
         if (200 !== $response_code) {

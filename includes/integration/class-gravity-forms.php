@@ -243,8 +243,9 @@ class GravityForms
 
             if (empty($value) && class_exists('\GFFormsModel')) {
                 // GFFormsModel::get_field_value() expects the field to be passed by reference.
-                $field_ref = &$field;
-                $value     = \call_user_func(array('\GFFormsModel', 'get_field_value'), $field_ref);
+                // We call it directly so the reference is preserved and let it populate $value.
+                $field_ref = $field;
+                \GFFormsModel::get_field_value($field_ref, $value);
             }
 
             if (empty($value) && isset($field->inputs) && is_array($field->inputs)) {
